@@ -1,124 +1,170 @@
-/* Main Stylesheet
----------------------------------------------------*/
-
-body {
-  padding-top: 50px;
-}
-
-textarea.textarea-sql {
-    resize: none;
-}
-
-.CodeMirror {
-    height: 200px;
-		border: 1px solid #ebebeb;
-}
-
-.sub-header {
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-/* Sticky footer styles
--------------------------------------------------- */
-html {
-  position: relative;
-  min-height: 100%;
-}
-body {
-  /* Margin bottom by footer height */
-  margin-bottom: 60px;
-}
-.footer {
-  position: absolute;
-  bottom: 0;
-  width: 100%;
-  background-color: #f5f5f5;
-}
-
-
-/* Custom page CSS
--------------------------------------------------- */
-/* Not required for template or sticky footer method. */
-
-body > .container {
-  padding: 60px 15px 0;
-}
-.container-fluid .text-muted {
-  margin: 20px 0;
-}
-
-.footer > .container-fluid {
-  padding-right: 15px;
-  padding-left: 15px;
-}
-
-code {
-  font-size: 80%;
-}
-
 /*
- * Sidebar
+ * Visual candy
  */
 
-/* Hide for mobile, show later */
-.sidebar {
+/** Changed in Bootstrap4 :( **/
+/** https://github.com/twbs/bootstrap/pull/21812 **/
+.btn {
+  cursor: pointer;
+}
+
+/** Loading effect **/
+/** https://martinwolf.org/blog/2015/01/pure-css-savingloading-dots-animation **/
+@keyframes blink {
+    0% {
+      opacity: .2;
+    }
+    20% {
+      opacity: 1;
+    }
+    100% {
+      opacity: .2;
+    }
+}
+
+.ts-loading span {
+    animation-name: blink;
+    animation-duration: 1.4s;
+    animation-iteration-count: infinite;
+    animation-fill-mode: both;
+}
+
+.ts-loading span:nth-child(2) {
+    animation-delay: .2s;
+}
+
+.ts-loading span:nth-child(3) {
+    animation-delay: .4s;
+}
+
+.post-loading {
   display: none;
-}
-
-.tables-toggle {
-	margin-right: 0px;
-	margin-left: 15px;
-}
-
-@media (min-width: 768px) {
-  .sidebar {
-    position: fixed;
-    top: 51px;
-    bottom: 0;
-    left: 0;
-    z-index: 1000;
-    display: block;
-    padding: 20px;
-    overflow-x: hidden;
-    overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
-    background-color: #f5f5f5;
-    border-right: 1px solid #eee;
-	height: auto !important;
-  }
-}
-
-/* Sidebar navigation */
-.nav-sidebar {
-  margin-right: -21px; /* 20px padding + 1px border */
-  margin-bottom: 20px;
-  margin-left: -20px;
-}
-.nav-sidebar > li > a {
-  padding-right: 20px;
-  padding-left: 20px;
-	cursor: pointer;
-}
-.nav-sidebar > .active > a,
-.nav-sidebar > .active > a:hover,
-.nav-sidebar > .active > a:focus {
-  color: #fff;
-  background-color: #428bca;
 }
 
 /*
  * Main content
  */
 
-.main {
-  padding: 20px;
+/** Question numbers **/
+.ts-questions .btn-secondary {
+  /*border-color: #eee;*/
 }
-@media (min-width: 768px) {
-  .main {
-    padding-right: 40px;
-    padding-left: 40px;
-  }
+
+/** Question **/
+.card {
+  border-color: #eee;
+  border-radius: .125rem;
 }
-.main .page-header {
-  margin-top: 0;
+
+.card-header {
+  border-bottom-color: #eee;
 }
+
+/** User input **/
+.CodeMirror {
+  border: 1px solid #eee;
+  border-radius: .125rem;
+  height: 15rem;
+}
+.CodeMirror-gutters {
+  border-color: #eee;
+}
+
+/*
+ * Sidebar
+ */
+.sidebar {
+  border-right: 1px solid #eee;
+  height: 100vh;
+}
+
+.sidebar h6 {
+  border-bottom: 1px solid #eee;
+}
+
+.list-special .list-group-item {
+  border: 0;
+  background-color: inherit;
+}
+
+.list-special .list-group-item:focus, .list-special .list-group-item:hover {
+	background-color: #eee;
+}
+
+.list-special .list-group-item:first-child {
+  border-top-right-radius: 0px !important;
+  border-top-left-radius: 0px !important;
+}
+
+.list-special .list-group-item:last-child {
+  border-bottom-right-radius: 0px !important;
+  border-bottom-left-radius: 0px !important;
+}
+
+/*
+ * Footer
+ */
+.ts-footer {
+  background-color: white;
+  border-top: 1px solid #ddd;
+  -webkit-box-shadow: 0px 0px 10px rgba(50, 50, 50, 0.2);
+  -moz-box-shadow:    0px 0px 10px rgba(50, 50, 50, 0.2);
+  box-shadow:         0px 0px 10px rgba(50, 50, 50, 0.2);
+}
+
+ .ts-footer a:not(:first-child) {
+   padding-left: 0.5rem;
+ }
+
+ .ts-footer a {
+   cursor: pointer;
+ }
+
+.ts-import:hover > .fa-folder,
+.ts-import > .fa-folder-open {
+  display: none;
+}
+
+.ts-import:hover > .fa-folder-open {
+  display: inline;
+}
+
+.ts-restore i:hover {
+  -webkit-transition: -webkit-transform 1s ease-in-out;
+          transition:         transform 1s ease-in-out;
+  -webkit-transform: rotate(360deg);
+          transform: rotate(360deg);
+}
+
+.ts-help i:hover {
+  color: #337ab7;
+}
+
+/*
+ * Tutorial
+ *//*
+.ts-tutorial-overlay {
+  height: 100%;
+  width: 100%;
+  position: absolute;
+  z-index: 1040;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ts-tutorial-overlay:after{
+  content:'';
+  position:absolute;
+  border-radius:100%;
+  width:100px; height:100px;
+  box-shadow: 0px 0px 0px 2000px rgba(0, 0, 0, 0.8);
+  pointer-events:none;
+}
+
+.ts-tutorial-popover {
+  bottom: 50px;
+  top: auto;
+  left: 50px;
+  right: auto;
+}
+*/
