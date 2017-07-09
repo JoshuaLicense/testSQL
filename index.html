@@ -16,6 +16,9 @@
 
     <!-- Site styling -->
     <link rel="stylesheet" href="css/main.css">
+    <link rel="icon" href="favicon.ico">
+
+    <title>Demo &#8231 testSQL</title>
   </head>
   <body>
 <!--
@@ -31,38 +34,17 @@
       <div class="row">
         <div class="col-md-3 col-lg-2 hidden-sm-down sidebar pt-4 bg-faded">
           <h6 class="pb-3 text-center">Database Schema</h6>
-          <div class="list-group list-special row">
-            <a href="#" class="px-3 py-1 list-group-item list-group-item-action justify-content-between">abc <span class="badge badge-default badge-pill">14</span></a>
+          <div class="list-group row" id="ts-schema">
+            <div class="ts-loading text-center" style="font-size:3rem;">
+              <span>.</span><span>.</span><span>.</span>
+            </div>
           </div>
         </div>
 
         <main class="col-md-9 col-lg-10 pt-3">
-          <div class="row pre-loading">
-            <div class="col">
-              <h4><span class="text-muted ts-loading">Loading questions<span>.</span><span>.</span><span>.</span> </span></h4>
-            </div>
+          <div class="row">
+            <div id="ts-responses" class="col"></div>
           </div>
-          <div class="row post-loading">
-            <div class="col-sm-12">
-              <div class="btn-group btn-group-sm mb-1" id="ts-questions" role="group" aria-label="Questions"> </div>
-              <div class="card">
-                <div class="card-header bg-faded">
-                  <!-- Question Header -->
-                  Question 1
-                </div>
-                <div class="card-block">
-                  <p class="card-text">
-                    <span class="text-muted ts-loading">Loading<span>.</span><span>.</span><span>.</span> </span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="row mt-3">
-              <div id="ts-responses" class="col">
-
-              </div>
-            </div>
           <div class="row mt-2">
             <div class="col">
               <h4>SQL Statement</h4>
@@ -74,9 +56,12 @@
             <div class="col">
               <button type="button" class="btn btn-success btn-sm" id="ts-run">Run SQL &raquo;</button>
               <button type="button" class="btn btn-danger btn-sm" id="ts-clear">Clear</button>
-
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
               <h4 class="mt-3">Result</h4>
-              <p class="text-muted">Click "Run SQL" to execute the SQL statement above.</p>
+              <div id="ts-result"><span class="text-muted">Click "Run SQL" to execute the SQL statement above.</span></div>
             </div>
           </div>
         </main>
@@ -87,12 +72,13 @@
   	  <div class="row">
         <div class="col-4 col-md-3 col-lg-2">
           <!-- TODO: Screen reader friendly -->
-  	      <a title="Help" class="ts-help"> <i class="fa fa-question"></i> </a>
-  	      <a title="Restore database to default" class="ts-restore"> <i class="fa fa-refresh"></i> </a>
-  	      <a title="Import a custom database" class="ts-import">
+  	      <a title="Help" id="ts-help"> <i class="fa fa-question"></i> </a>
+  	      <a title="Restore database to default" id="ts-restore"> <i class="fa fa-refresh"></i> </a>
+          <input type="file" id="ts-import" style="display:none">
+          <label title="Import a database" for="ts-import" id="ts-import-icons" class="mb-0">
     		    <i class="fa fa-folder-open"></i>
     		    <i class="fa fa-folder"></i>
-  		    </a>
+          </label>
         </div>
         <div class="col-8 col-md-9 col-lg-10">
   	       <a class="small text-muted float-right" href="https://github.com/JoshuaLicense/testSQL">Powered by testSQL</a>
@@ -112,87 +98,20 @@
     <script src="js/sql.js"></script>
     <script src="js/main.js"></script>
     <script src="js/identity.js"></script>
-    <script src="js/questions.js"></script>
     <script>
-    Cookies.set('CurrentQuestion', 2);
-
-    function addQuestionToView(questionInfo) {
-      let questionNumber = questionInfo[0].values[0][0];
-      let questionText = questionInfo[0].values[0][1];
-      let isCompleted = !!questionInfo[0].values[0][4];
-
-      console.log(isCompleted);
-
-      $('#ts-questions').append(`<button type="button" class="btn ${isCompleted ? 'btn-success' : 'btn-secondary'}" id="ts-q${questionNumber}" data-number="${questionNumber}" data-text="${questionText}" tabindex="${questionNumber}">${questionNumber}</button>`);
-
-      console.log(questionText, questionNumber);
-    }
-
-    /* load (async) the required data before instanticing the class
-     * http://stackoverflow.com/questions/24398699/is-it-bad-practice-to-have-a-constructor-function-return-a-promise
-     */
-    let ts;
-
-    testSQL.load().then((response) => {
-      // load after the database
-      ts = new testSQL({ buffer: response });
-
-      console.log(ts.Questions().get(1));
-      console.log(ts.Questions().get(2));
-      console.log(ts.Questions().isCompleted());
-
-      // once loaded remove the loading text
-      $('.pre-loading').hide();
-
-      // First add the question numbers
-      let total = ts.Questions().total();
-      for(let i = 0; i < total; i = i + 1) {
-        let questionInfo = ts.Questions().get(i + 1);
-        addQuestionToView(questionInfo);
-      }
-
-      $('.post-loading').show();
-
-      console.log(ts.Questions().getAllCompleted());
-      ts.Questions().total();
-    },
-
-    function (error) {
-      console.log(error);
-    });
-
     // load while database is getting loaded
     let identity = new Identity();
     console.log(identity.login('abc', 'abc'));
 
-    const editable = CodeMirror.fromTextArea(document.getElementById('ts-input'), {
+    const input = CodeMirror.fromTextArea(document.getElementById('ts-input'), {
       mode: 'text/x-mysql',
       lineWrapping: true,
       lineNumbers: true,
       theme: 'default',
     });
 
-    /* jQuery Event Handlers */
-    $(() => {
-      $('#ts-questions').on('click', 'button', function() {
-        $(this).
-        console.log(this);
-      });
-
-      $('#ts-run').click(() => {
-        let input = editable.getValue();
-        if (input) {
-          ts.validateAnswer(editable.getValue());
-        } else {
-          showResponse('Needs something in it');
-        }
-      });
-
-      $('#ts-clear').click(() => {
-        editable.setValue('');
-      });
-    });
-
     </script>
+    <script src="js/question.functions.js" async></script>
+    <script src="js/questions.js" async></script>
   </body>
 </html>

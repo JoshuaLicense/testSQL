@@ -50,6 +50,10 @@
   /*border-color: #eee;*/
 }
 
+.btn-group-sm>.btn, .btn-sm {
+  padding: 0.5rem 0.75rem;
+}
+
 /** Question **/
 .card {
   border-color: #eee;
@@ -70,33 +74,44 @@
   border-color: #eee;
 }
 
+/** Output results **/
+#ts-result td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 20rem;
+}
+
 /*
  * Sidebar
  */
 .sidebar {
   border-right: 1px solid #eee;
   height: 100vh;
+  /* TODO: Alter the foreground to white, background grey then it'll extend on result generation */
 }
 
 .sidebar h6 {
   border-bottom: 1px solid #eee;
 }
 
-.list-special .list-group-item {
+#ts-schema .list-group-item {
   border: 0;
   background-color: inherit;
+  cursor: pointer;
+  font-size: 0.95rem;
 }
 
-.list-special .list-group-item:focus, .list-special .list-group-item:hover {
+#ts-schema .list-group-item:focus, #ts-schema .list-group-item:hover {
 	background-color: #eee;
 }
 
-.list-special .list-group-item:first-child {
+#ts-schema .list-group-item:first-child {
   border-top-right-radius: 0px !important;
   border-top-left-radius: 0px !important;
 }
 
-.list-special .list-group-item:last-child {
+#ts-schema .list-group-item:last-child {
   border-bottom-right-radius: 0px !important;
   border-bottom-left-radius: 0px !important;
 }
@@ -104,6 +119,12 @@
 /*
  * Footer
  */
+
+/** to not overlap content **/
+body {
+  padding-bottom: 50px;
+}
+
 .ts-footer {
   background-color: white;
   border-top: 1px solid #ddd;
@@ -112,7 +133,7 @@
   box-shadow:         0px 0px 10px rgba(50, 50, 50, 0.2);
 }
 
- .ts-footer a:not(:first-child) {
+ .ts-footer a:not(:first-child), #ts-import-icons {
    padding-left: 0.5rem;
  }
 
@@ -120,23 +141,23 @@
    cursor: pointer;
  }
 
-.ts-import:hover > .fa-folder,
-.ts-import > .fa-folder-open {
+#ts-import-icons:hover > .fa-folder,
+#ts-import-icons > .fa-folder-open {
   display: none;
 }
 
-.ts-import:hover > .fa-folder-open {
+#ts-import-icons:hover > .fa-folder-open {
   display: inline;
 }
 
-.ts-restore i:hover {
+#ts-restore i:hover {
   -webkit-transition: -webkit-transform 1s ease-in-out;
           transition:         transform 1s ease-in-out;
   -webkit-transform: rotate(360deg);
           transform: rotate(360deg);
 }
 
-.ts-help i:hover {
+#ts-help i:hover {
   color: #337ab7;
 }
 
