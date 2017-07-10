@@ -6,19 +6,19 @@ class Question {
   }
 
   initialize() {
-    ts.db.exec('CREATE TABLE IF NOT EXISTS `ts-questions` (`ts-number` INTEGER PRIMARY KEY, `ts-theme` TEXT, `ts-question` TEXT, `ts-answer` TEXT, `ts-keywords` TEXT, `ts-completed` NULL DEFAULT NULL)');
+    ts.db.exec('CREATE TABLE IF NOT EXISTS `ts-questions` (`ts-number` INTEGER PRIMARY KEY, `ts-theme` TEXT, `ts-question` TEXT, `ts-answer` TEXT, `ts-keywords` TEXT, `ts-statement` TEXT, `ts-completed` NULL DEFAULT NULL)');
 
     if(this.total() === 0) {
       throw Error(`No questions found`);
     }
 
     // Override the main execute class to validate the answer too!
-    let _executeInput = ts.executeInput;
+    const _executeInput = ts.executeInput;
     ts.executeInput = (sql) => {
-      _executeInput(sql, this.validateAnswer(sql));
+      _executeInput.call(ts, sql, this.validateInput(sql));
     }
 
-    let _importFile = ts.importFile;
+    const _importFile = ts.importFile;
     ts.importFile = (file) => {
       _importFile(file).then(() => {
         this.refresh();
@@ -55,13 +55,22 @@ class Question {
   // No need to save to file as file is saved to cache immediately on login
   get(number) {
     const storedQuestion = ts.db.exec('SELECT * FROM `ts-questions` WHERE `ts-number` = ' + number);
-    let t = ts.db.exec(`select * from \`ts-questions\``);
+
     if (storedQuestion.length > 0) {
-      console.log(storedQuestion);
+      const [ number, theme, question, answer, keywords, statement, completed, ] = storedQuestion[0].values[0];
+
+      return {
+        number,
+        theme,
+        question,
+        answer,
+        keywords,
+        completed,
+        statement,
+      };
     }
 
     let findQuestion = findQuestionInArray(number);
-    console.log(findQuestion);
     let newQuestion = findQuestion.func();
 
     const questionObj = {
@@ -70,6 +79,7 @@ class Question {
       number : number,
       answer : newQuestion.answer,
       keywords : newQuestion.keywords || [],
+      statement : newQuestion.statement || `SELECT`,
     };
 
     this.save(questionObj);
@@ -79,9 +89,11 @@ class Question {
     return { number, theme, question, completed : false }
   }
 
-  save({theme, question, number, answer, keywords}) {
-    let stmt = ts.db.prepare(`INSERT INTO \`ts-questions\` VALUES (?, ?, ?, ?, ?, NULL)`, [number, theme, question, answer, keywords]);
+  save({ theme, question, number, answer, keywords, statement, }) {
+    let stmt = ts.db.prepare(`INSERT INTO \`ts-questions\` VALUES (?, ?, ?, ?, ?, ?, NULL)`, [number, theme, question, answer, keywords, statement]);
     stmt.step();
+    stmt.free();
+
     ts.save();
     // TODO: If logged in, save to their file
   }
@@ -122,12 +134,11 @@ class Question {
     }
 
     $(`#ts-question-numbers`).html(html);
-    return total;
   }
 
   display(questionNumber) {
     let questionInfo = $(`#ts-q${questionNumber}`).data();
-    if(questionInfo.number) {
+    if(typeof questionInfo.number !== `undefined`) {
       Cookies.set(`CurrentQuestion`, questionNumber);
       currentQuestion = questionNumber;
 
@@ -150,68 +161,58 @@ class Question {
     this.display(1);
   }
 
-  validateAnswer(sql) {
+  validateInput(inputSQL) {
     // Get the question, based on the current question (COOKIE)
-    let questionNumber = Cookies.get('CurrentQuestion');
-    let questionInfo = this.get(questionNumber);
-    console.log(questionInfo);
-    if (questionInfo) {
-      /*
-       * Step 1:  Constraint checking
-       */
-      let inputSQL = sql.toUpperCase();
-      let modelSQL = questionInfo[0].values[0][3];
-      let modelConstraints = questionInfo[0].values[0][4];
-      if (modelConstraints) {
-        let constraintsArray = modelConstraints.split(',');
-        let violations = constraintsArray.filter(el => inputSQL.indexOf(el) === -1);
+    let questionNumber = Cookies.get(`CurrentQuestion`);
+    const { number, theme, question, answer, keywords, statement, isCompleted, } = this.get(questionNumber);
+    console.log(isCompleted);
+    /*
+     * Step 1:  Constraint checking
+     */
+    let capitalizedInput = inputSQL.toUpperCase();
+    if (keywords.length > 0) {
+      let violations = keywords.filter(el => capitalizedInputSQL.indexOf(el) === -1);
 
-        // Check if any constraints were violated
-        if (violations.length > 0) {
-          showResponse(`Looking for the incursion of the keyword: ${violations[0]} but not found`);
-          return false;
-        }
-      }
-
-      // Don't allow mismatch of statements
-      let operationExpected = questionInfo[0].values[0][6] || 'SELECT';
-      if(modelSQL.indexOf(operationExpected) === -1) {
-        showResponse(`Expecting a ${questionInfo[0].values[0][6]} operation`)
-        return false;
-      }
-
-      let response;
-      // What type of statement is the question expecting
-      if(questionInfo[0].values[0][6] === 'INSERT') {
-        response = this.validateInsertAnswer(questionInfo, inputSQL);
-      } else {
-        response = this.validateSelectAnswer(questionInfo, inputSQL);
-      }
-
-      if(response === true) {
-        let isCompleted = questionInfo[0].values[0][5];
-        console.log(questionInfo);
-        if (!isCompleted) {
-          this.markCompleted(questionNumber);
-          console.log('MARKED');
-          return true;
-        }
-
-        showResponse(`Well done! The question was solved`, `success`);
+      // Check if any constraints were violated
+      if (violations.length > 0) {
+        showResponse(`Looking for the incursion of the keyword: ${violations[0]} but not found`);
         return false;
       }
     }
-    showResponse(`An error occurred while fetching the question`);
+
+    // Don't allow mismatch of statements
+    if(answer.indexOf(statement) === -1) {
+      showResponse(`Expecting a ${statement} statement`)
+      return false;
+    }
+
+    let response;
+    // What type of statement is the question expecting
+    if(statement === 'SELECT') {
+      response = this.validateSelect(answer, inputSQL);
+    } else {
+      response = this.validateInsert(answer, inputSQL);
+    }
+
+    if(response === true) {
+      if (!completed) {
+        this.markCompleted(questionNumber);
+        console.log('MARKED');
+        return true;
+      }
+
+      showResponse(`Well done! The question was solved`, `success`);
+      return false;
+    }
     return false;
   }
 
-  validateSelectAnswer(questionInfo, inputSQL) {
-    let modelSQL = questionInfo[0].values[0][3];
+  validateSelect(answerSQL, inputSQL) {
     /*
      * Construct object of objects of each statement
      */
     // TODO: Optimize, can exec then loop?
-    const modelStmt = ts.db.prepare(modelSQL);
+    const modelStmt = ts.db.prepare(answerSQL);
     const modelResultObj = [];
     while (modelStmt.step()) modelResultObj.push(modelStmt.getAsObject());
     modelStmt.free();
@@ -241,7 +242,7 @@ class Question {
     /*
      * Step 3:  Check each row individually for simularity
      */
-    const normalize = function normalize(colName) {
+    const normalize = (colName) => {
       return colName.replace(/[^A-Z()*]+/gi, '');
     }
 
