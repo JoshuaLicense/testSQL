@@ -2,9 +2,31 @@
 
 class Question {
   constructor() {
+    this.initialize();
+  }
+
+  initialize() {
     ts.db.exec('CREATE TABLE IF NOT EXISTS `ts-questions` (`ts-number` INTEGER PRIMARY KEY, `ts-theme` TEXT, `ts-question` TEXT, `ts-answer` TEXT, `ts-keywords` TEXT, `ts-completed` NULL DEFAULT NULL)');
-    console.log(`created again`);
-    this.totalQuestions();
+
+    if(this.total() === 0) {
+      throw Error(`No questions found`);
+    }
+
+    // Override the main execute class to validate the answer too!
+    let _executeInput = ts.executeInput;
+    ts.executeInput = (sql) => {
+      _executeInput(sql, this.validateAnswer(sql));
+    }
+
+    let _importFile = ts.importFile;
+    ts.importFile = (file) => {
+      _importFile(file).then(() => {
+        this.refresh();
+      },
+      (error) => {
+        console.log(error);
+      });
+    }
   }
 
   // questions get cached after being generated
@@ -26,55 +48,42 @@ class Question {
     console.log(`cached deleted`);
   }
 
-  totalQuestions() {
-    console.log(questionFunctions.length);
+  total() {
+    return questionFunctions.length;
   }
 
   // No need to save to file as file is saved to cache immediately on login
   get(number) {
-    let storedQuestion = ts.db.exec('SELECT * FROM `ts-questions` WHERE `ts-number` = ' + number);
-
+    const storedQuestion = ts.db.exec('SELECT * FROM `ts-questions` WHERE `ts-number` = ' + number);
+    let t = ts.db.exec(`select * from \`ts-questions\``);
     if (storedQuestion.length > 0) {
-      console.log('Stored', storedQuestion);
-      return storedQuestion;
+      console.log(storedQuestion);
     }
 
-    let maxAttempts = 5; // The number of loops trying to create the question
-    let attempts = 0;
+    let findQuestion = findQuestionInArray(number);
+    console.log(findQuestion);
+    let newQuestion = findQuestion.func();
 
-    while(this.make(number) === false) {
-      attempts = attempts + 1;
-      if(attempts > maxAttempts) {
-        console.log('breaked');
-        return false;
-      }
-    }
+    const questionObj = {
+      theme : findQuestion.theme,
+      question : newQuestion.question,
+      number : number,
+      answer : newQuestion.answer,
+      keywords : newQuestion.keywords || [],
+    };
 
-    // TODO: Could remove this call but would mean less flexibility in the future
-    return this.get(number);
+    this.save(questionObj);
+
+    const { theme, question } = questionObj;
+
+    return { number, theme, question, completed : false }
   }
 
-  make(number) {
-    console.log('make QUESTION');
-    //Return [];
-    this.save({number: number, theme: 'Intoducing Blah de Blah', question: 'Test', answer: 'SELECT * FROM Customers', keywords: 'A,B'});
-    return true;
-  }
-
-  save(options = {}) {
-    ts.db.exec('INSERT INTO `ts-questions` VALUES ("' + options.number + '", "' + options.theme + '", "' + options.question + '", "' + options.answer + '", "' + options.keywords + '", NULL)');
+  save({theme, question, number, answer, keywords}) {
+    let stmt = ts.db.prepare(`INSERT INTO \`ts-questions\` VALUES (?, ?, ?, ?, ?, NULL)`, [number, theme, question, answer, keywords]);
+    stmt.step();
     ts.save();
     // TODO: If logged in, save to their file
-  }
-
-  total() {
-    let total;
-    // TODO: If logged in use
-    total = ts.db.exec('SELECT COUNT(*) FROM `ts-questions`');
-    // else just count the json
-    // total = questionsJson.length;
-    console.log(total[0].values[0][0]);
-    return total[0].values[0][0];
   }
 
   isCompleted(number) {
@@ -104,12 +113,12 @@ class Question {
 
     for(let i = 0; i < total; i = i + 1) {
       let questionInfo = this.get(i + 1);
-      let questionNumber = questionInfo[0].values[0][0];
-      let questionTheme = questionInfo[0].values[0][1];
-      let questionText = questionInfo[0].values[0][2];
-      let isCompleted = !!questionInfo[0].values[0][5];
+      let Number = questionInfo.number;
+      let Theme = questionInfo.theme;
+      let Text = questionInfo.question;
+      let isCompleted = questionInfo.completed;
 
-      html = html + `<button type="button" class="btn ${currentQuestion === questionNumber ? 'active' : ''} ${isCompleted ? 'btn-success' : 'btn-secondary'}" id="ts-q${questionNumber}" data-number="${questionNumber}" data-text="${questionText}" data-theme="${questionTheme}" data-isCompleted="${isCompleted}" tabindex="${questionNumber}">${questionNumber}</button>`;
+      html = html + `<button type="button" class="btn ${currentQuestion === Number ? 'active' : ''} ${isCompleted ? 'btn-success' : 'btn-secondary'}" id="ts-q${Number}" data-number="${Number}" data-text="${Text}" data-theme="${Theme}" data-isCompleted="${isCompleted}" tabindex="${Number}">${Number}</button>`;
     }
 
     $(`#ts-question-numbers`).html(html);
@@ -118,7 +127,7 @@ class Question {
 
   display(questionNumber) {
     let questionInfo = $(`#ts-q${questionNumber}`).data();
-    if(questionInfo) {
+    if(questionInfo.number) {
       Cookies.set(`CurrentQuestion`, questionNumber);
       currentQuestion = questionNumber;
 
@@ -134,8 +143,7 @@ class Question {
   }
 
   refresh() {
-    // TODO: Load questions
-    question = new Question();
+    this.initialize();
 
     this.displayNumbers();
 
@@ -284,63 +292,43 @@ let html = `
 $(document).ready(function() {
   let question = new Question();
 
-  // only load the rest if questions exist...
-  if(question.total() > 0) {
-    // Override the main execute class to validate the answer too!
-    let _executeInput = ts.executeInput;
-    ts.executeInput = function() {
-      [].push.call(arguments, question.validateAnswer(arguments[0]));
-      console.log(arguments);
-      _executeInput.apply(this, arguments);
+  $(`main`).prepend(html);
+
+  question.displayNumbers();
+
+  // load the current question
+  question.display(currentQuestion);
+
+  $(`body`).on(`click`, `#ts-question-numbers button`, function() {
+    let newQuestion = $(this).data(`number`);
+
+    if(currentQuestion === newQuestion) {
+      return;
     }
 
-    let _importFile = ts.importFile;
-    ts.importFile = function() {
-      _importFile.apply(this, arguments);
-      question.refresh();
+    currentQuestion = question.display(newQuestion) || currentQuestion;
+  });
+
+  // binding arrow keys for improved accessibility
+  // e.which for cross-broswer compatability
+  // http://api.jquery.com/event.which/
+  // TODO: Move top part
+  $(document).keydown(function(e) {
+    // don't call if cursor inside textarea
+    if ($(e.target).is('textarea')) {
+      // both enter key and ctrl key
+      if (e.which == 13 && e.ctrlKey) {
+        // execute the sql
+        ts.executeInput(editable.getValue());
+      }
+    } else {
+      if (e.which == 37) { // left arrow
+        // simulate a click of the previous question
+        currentQuestion = question.display(currentQuestion - 1) || currentQuestion;
+      } else if (e.which == 39) { // right arrow
+        // simulate a click of the next question
+        currentQuestion = question.display(currentQuestion + 1) || currentQuestion;
+      }
     }
-
-    $(`main`).prepend(html);
-
-    question.displayNumbers();
-
-    // load the current question
-    question.display(currentQuestion);
-
-    $(`body`).on(`click`, `#ts-question-numbers button`, function() {
-      let newQuestion = $(this).data(`number`);
-
-      if(currentQuestion === newQuestion) {
-        return;
-      }
-
-      currentQuestion = question.display(newQuestion) || currentQuestion;
-    });
-
-    // binding arrow keys for improved accessibility
-    // e.which for cross-broswer compatability
-    // http://api.jquery.com/event.which/
-    // TODO: Move top part
-    $(document).keydown(function(e) {
-      // don't call if cursor inside textarea
-      if ($(e.target).is('textarea')) {
-        // both enter key and ctrl key
-        if (e.which == 13 && e.ctrlKey) {
-          // execute the sql
-          ts.executeInput(editable.getValue());
-        }
-      } else {
-        if (e.which == 37) { // left arrow
-          // simulate a click of the previous question
-          currentQuestion = question.display(currentQuestion - 1) || currentQuestion;
-        } else if (e.which == 39) { // right arrow
-          // simulate a click of the next question
-          currentQuestion = question.display(currentQuestion + 1) || currentQuestion;
-        }
-      }
-    });
-
-  } else {
-    console.log(`No questions were found!`);
-  }
+  });
 });

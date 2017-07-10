@@ -59,7 +59,7 @@ class testSQL {
     xhr.onload = function(e) {
       if (xhr.status === 200) {
         console.log('Loaded from default.');
-        resolve(new Uint8Array(this.response));
+        resolve(new Uint8Array(xhr.response));
       } else {
         reject(Error('Bad, Bad'));
       }
@@ -69,20 +69,32 @@ class testSQL {
   }
 
   importFile(file) {
-    let fileReader = new FileReader();
-    fileReader.onload = () => {
-      clearAll();
+    return new Promise((resolve, reject) => {
+      let fileReader = new FileReader();
+      fileReader.onload = () => {
 
-      let uInt8 = new Uint8Array(fileReader.result);
+        // save the old database if the imported file is corrupt
+        const _ts = ts;
 
-      ts = new testSQL({ buffer: uInt8 });
-      ts.save();
+        let uInt8 = new Uint8Array(fileReader.result);
+        ts = new testSQL({ buffer: uInt8 });
 
-      ts.displaySchema();
+        // the scheme will fail to load if the file is not a VALID database
+        try {
+          ts.displaySchema();
+          ts.save();
 
-      // TODO: Questions
-    }
-    fileReader.readAsArrayBuffer(file);
+          clearAllLocalStorage();
+
+          resolve();
+        } catch(e) {
+          // revert all changes
+          ts = _ts;
+          reject(Error('Bad, Bad'));
+        }
+      }
+      fileReader.readAsArrayBuffer(file);
+    });
   }
 
   static loadCached(cachedDatabase, resolve, reject) {
@@ -98,7 +110,7 @@ class testSQL {
   }
 
   static loadDefault(resolve, reject) {
-    this.loadFile(`Chinook_Sqlite.db`);
+    this.loadFile(`Chinook_Sqlite.db`, resolve, reject);
   }
 
   save() {
@@ -160,8 +172,7 @@ testSQL.load().then((response) => {
 
   ts.displaySchema();
 },
-
-function (error) {
+(error) => {
   console.log(error);
 });
 
