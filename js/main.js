@@ -240,7 +240,11 @@ $(document).ready(function() {
     if (sql) {
       // Remove old alerts
       clearView();
-      ts.executeInput(sql);
+      try {
+        ts.executeInput(sql);
+      } catch(e) {
+        showResponse(e);
+      }
     } else {
       showResponse(`Needs something in it`);
     }
