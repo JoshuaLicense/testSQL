@@ -33,7 +33,7 @@ $user = $stmt->fetch(PDO::FETCH_ASSOC);
 if($user) {
   if(password_verify($password, $user['Password'])) {
     // Make a JWT (JSON Web Token)
-    require('JWT/JWT.php');
+    require('lib/JWT/JWT.php');
 
     $key = $user['Password'];
     $token = array(
