@@ -11,50 +11,25 @@ class testSQL {
     console.log('object constructor set');
   }
 
-  static load(fileName) {
+  static load() {
     return new Promise((resolve, reject) => {
       let cachedDatabase = localStorage.getItem('testSQL');
-      let sessionKey = window.sessionStorage.getItem('sessionKey');
 
       // Populate with stored database (cached/file) or use the default one
-      if (sessionKey) {
-        this.loadSession(sessionKey, resolve, reject);
-        console.log('From file');
-      } else if (cachedDatabase) {
+      if(cachedDatabase) {
         this.loadCached(cachedDatabase, resolve, reject);
-        console.log('Cached Loaded');
-      } else if (fileName) {
-        this.loadFile(fileName, resolve, reject);
       } else {
         testSQL.loadDefault(resolve, reject);
       }
     });
   }
 
-  static loadSession(sessionKey, resolve, reject) {
-    $.ajax({
-      method: 'post',
-      url: 'request.php?action=load',
-      data: { key: sessionKey },
-      dataType: 'json',
-      success: function(data) {
-        this.loadFile(data.relativePath, resolve, reject);
-      },
-
-      error: function(data) {
-        this.loadDefault();
-      },
-    });
-  }
-
-  // TODO Make php return file name of personalized database
-  // TODO Make this one http request instead of two (return the buffer straight from PHP)
-  static loadFile(fileName, resolve, reject) {
+  static loadDefault(resolve, reject) {
     let xhr = new XMLHttpRequest();
 
     // TODO Load default database if can't find session (send back default string)
     // TODO fetch the filename from PHP!
-    xhr.open('GET', fileName, true);
+    xhr.open(`GET`, `Chinook_Sqlite.db`);
     xhr.responseType = 'arraybuffer';
     xhr.onload = function(e) {
       if (xhr.status === 200) {
@@ -66,35 +41,6 @@ class testSQL {
     };
 
     xhr.send();
-  }
-
-  importFile(file) {
-    return new Promise((resolve, reject) => {
-      let fileReader = new FileReader();
-      fileReader.onload = () => {
-
-        // save the old database if the imported file is corrupt
-        const _ts = ts;
-
-        let uInt8 = new Uint8Array(fileReader.result);
-        ts = new testSQL({ buffer: uInt8 });
-
-        // the scheme will fail to load if the file is not a VALID database
-        try {
-          ts.displaySchema();
-          ts.save();
-
-          clearAllLocalStorage();
-
-          resolve();
-        } catch(e) {
-          // revert all changes
-          ts = _ts;
-          reject(Error('Bad, Bad'));
-        }
-      }
-      fileReader.readAsArrayBuffer(file);
-    });
   }
 
   static loadCached(cachedDatabase, resolve, reject) {
@@ -109,10 +55,6 @@ class testSQL {
     resolve(new Uint8Array(result));
   }
 
-  static loadDefault(resolve, reject) {
-    this.loadFile(`Chinook_Sqlite.db`, resolve, reject);
-  }
-
   save() {
     let result = this.db.export();
     let strings = [];
@@ -124,6 +66,38 @@ class testSQL {
     }
     window.localStorage.setItem('testSQL', strings.join(''));
     console.log('saved to cache');
+  }
+
+  static loadUint8Array(uint8, resolve, reject) {
+    // save the old database if the imported file is corrupt
+    const _ts = ts;
+
+    ts = new testSQL({ buffer: uint8 });
+
+    // the scheme will fail to load if the file is not a VALID database
+    try {
+      ts.displaySchema();
+      ts.save();
+
+      clearAllLocalStorage();
+
+      resolve();
+    } catch(e) {
+      // revert all changes
+      ts = _ts;
+      reject(Error('Bad, Bad'));
+    }
+  }
+
+  importFile(file) {
+    return new Promise((resolve, reject) => {
+      let fileReader = new FileReader();
+      fileReader.onload = () => {
+        const uint8 = new Uint8Array(fileReader.result);
+        testSQL.loadUint8Array(uint8, resolve, reject);
+      }
+      fileReader.readAsArrayBuffer(file);
+    });
   }
 
   executeInput(sql, save) {
@@ -201,11 +175,11 @@ const showOutput = function showOutput(result) {
   $('#ts-result').html(html);
 }
 
-const showResponse = function showResponse(msg, alertType) {
+const showResponse = (msg, alertType) => {
   $('#ts-responses').append(`<div class="alert alert-${alertType || `danger`} mt-1 mb-0 alert-dismissible fade show"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>${msg}</div>`);
 }
 
-const clearView = function cleanView(andInput) {
+const clearView = (andInput) => {
   $('#ts-responses > div').remove();
   $('#ts-result').html(`<span class="text-muted">Click "Run SQL" to execute the SQL statement above.</span>`);
 
@@ -214,12 +188,12 @@ const clearView = function cleanView(andInput) {
   }
 }
 
-const clearAllLocalStorage = function clearAllLocalStorage() {
+const clearAllLocalStorage = () => {
   localStorage.clear();
   clearCookies();
 }
 
-const clearCookies = function clearCookies() {
+const clearCookies = () => {
   Object.keys(Cookies.get()).forEach((cookieName) => Cookies.remove(cookieName));
 }
 
