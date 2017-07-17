@@ -154,10 +154,10 @@ class testSQL {
     schema[0].values.forEach((el) => {
       let count = this.db.exec(`SELECT COUNT(*) FROM ${el}`);
 
-      html = html + `<a class="px-3 py-1 list-group-item list-group-item-action justify-content-between" data-name="${el}">${el} <span class="badge badge-default badge-pill">${count[0].values[0]}</span></a>`
+      html = html + `<li class="list-group-item list-group-item-action justify-content-between py-1" data-name="${el}" role="button">${el} <span class="badge badge-default badge-pill">${count[0].values[0]}</span></a>`
     });
 
-    $(`#ts-schema`).html(html);
+    $(`.ts-schema`).html(html);
   }
 }
 
@@ -225,17 +225,8 @@ const clearCookies = function clearCookies() {
 
 /* jQuery Event Handlers */
 $(document).ready(function() {
-  /* Database schema tables */
-  $(`#ts-schema`).on(`click`, `a`, function() {
-    let tableName = $(this).data(`name`);
-    let sql = `SELECT * FROM \`${tableName}\``;
-
-    input.setValue(sql);
-    showOutput(ts.db.exec(sql));
-  });
-
   /* "Run SQL" button */
-  $(`#ts-run`).click(() => {
+  $(`.ts-run`).click(() => {
     let sql = input.getValue();
     if (sql) {
       // Remove old alerts
@@ -251,12 +242,12 @@ $(document).ready(function() {
   });
 
   /* "Clear" button */
-  $(`#ts-clear`).click(() => {
+  $(`.ts-clear`).click(() => {
     input.setValue(``);
   });
 
   /* Restore icon */
-  $(`#ts-restore`).on(`click`, function() {
+  $(`.ts-restore-icon`).on(`click`, function() {
     testSQL.load().then((response) => {
       clearAllLocalStorage();
 
@@ -280,7 +271,56 @@ $(document).ready(function() {
   });
 
   /* Help icon */
-  $(`#ts-help`).on(`click`, function() {
+  $(`.ts-help-icon`).on(`click`, function() {
     alert(`help`);
+  });
+
+  /* Sidebar */
+  $(`.sidebar`).draggable({
+    axis: `x`,
+    handle : `.sidebar-toggler`,
+    containment: `.sidebar-container`,
+    addClasses: false,
+    stop: (event, ui) => {
+      // to maintain position on resize
+      const toPercentage = ui.position.left / ui.helper.parent().width() * 100;
+
+      // too small!
+      if(toPercentage > 30) {
+        ui.helper.css('left', 'calc(100% - 18.75rem)'); // minus width of container (closed)
+      } else {
+        ui.helper.css('left', toPercentage + '%');
+      }
+    },
+    drag: (event, { position : { left : offsetLeft }}) => {
+      if (offsetLeft < 130) {
+        // spin text (the container is wide enough)
+        $(`.sidebar h6`).removeClass(`vertical`);
+      } else {
+        $(`.sidebar h6`).addClass(`vertical`);
+      }
+    }
+  });
+
+  $(`.sidebar-toggler`).on(`dblclick`, () => {
+    const [{ offsetLeft }] = $(`.sidebar`).draggable(`widget`);
+    $(`.sidebar`).css('left', +(offsetLeft === 276) || 'calc(100% - 18.75rem)');
+
+    if (offsetLeft === 276) {
+      // spin text (the container is wide enough)
+      $(`.sidebar h6`).removeClass(`vertical`);
+    } else {
+      $(`.sidebar h6`).addClass(`vertical`);
+    }
+  });
+
+
+  /* Database schema tables */
+  $(`.ts-schema`).on(`click`, `li`, function() {
+    let tableName = $(this).data(`name`);
+    let sql = `SELECT * FROM \`${tableName}\``;
+
+    input.setValue(sql);
+    showOutput(ts.db.exec(sql));
   });
 });

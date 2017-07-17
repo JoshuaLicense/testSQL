@@ -23,16 +23,7 @@
   <body>
     <div class="container-fluid bg-faded">
       <div class="row">
-        <div class="col-md-3 col-lg-2 hidden-sm-down sidebar pt-4 bg-faded">
-          <h6 class="pb-3 text-center">Database Schema</h6>
-          <div class="list-group row" id="ts-schema">
-            <div class="ts-loading text-center" style="font-size:3rem;">
-              <span>.</span><span>.</span><span>.</span>
-            </div>
-          </div>
-        </div>
-
-        <main class="col-md-9 col-lg-10 pt-3">
+        <main class="col-12 pt-2">
           <div class="row">
             <div id="ts-responses" class="col"></div>
           </div>
@@ -45,8 +36,8 @@
           </div>
           <div class="row mt-1">
             <div class="col">
-              <button type="button" class="btn btn-success btn-sm" id="ts-run">Run SQL &raquo;</button>
-              <button type="button" class="btn btn-danger btn-sm" id="ts-clear">Clear</button>
+              <button type="button" class="btn btn-success btn-sm ts-run">Run SQL &raquo;</button>
+              <button type="button" class="btn btn-danger btn-sm ts-clear">Clear</button>
             </div>
           </div>
           <div class="row">
@@ -59,23 +50,41 @@
       </div>
     </div>
 
-  	<nav class="navbar fixed-bottom navbar-light ts-footer" style="border-top: 1px solid #ddd;">
-  	  <div class="row">
-        <div class="col-4 col-md-3 col-lg-2">
-          <!-- TODO: Screen reader friendly -->
-  	      <a title="Help" id="ts-help"> <i class="fa fa-question"></i> </a>
-  	      <a title="Restore database to default" id="ts-restore"> <i class="fa fa-refresh"></i> </a>
+    <div class="icon-nav">
+      <div class="icon ts-import-icon bottom" role="button">
+        <label for="ts-import" class="m-0 d-block" role="button">
           <input type="file" id="ts-import" style="display:none">
-          <label title="Import a database" for="ts-import" id="ts-import-icons" class="mb-0">
-    		    <i class="fa fa-folder-open"></i>
-    		    <i class="fa fa-folder"></i>
-          </label>
-        </div>
-        <div class="col-8 col-md-9 col-lg-10">
-  	       <a class="small text-muted float-right" href="https://github.com/JoshuaLicense/testSQL">Powered by testSQL</a>
-        </div>
+          <i class="fa fa-folder-open"></i>
+          <i class="fa fa-folder"></i>
+          <h6>Import Database</h6>
+        </label>
       </div>
-  	</nav>
+      <div class="icon ts-restore-icon" role="button">
+        <i class="fa fa-refresh"></i>
+        <h6>Restore Database</h6>
+      </div>
+      <div class="icon ts-help-icon" role="button">
+        <i class="fa fa-question"></i>
+        <h6>Help</h6>
+      </div>
+    </div>
+
+    <div class="sidebar-container p-0">
+      <div class="sidebar p-0 pt-4">
+        <h6 class="vertical">Database Schema</h6>
+        <div class="list-group ts-schema">
+          <div class="ts-loading text-center" style="font-size:3rem;">
+            <span>.</span><span>.</span><span>.</span>
+          </div>
+        </div>
+        <div class="sidebar-toggler inactive py-3 px-2" title="Double click to expand/collapse">
+          <div class="sidebar-toggler-text"> || </div>
+        </div>
+        <footer class="pb-2 pr-2">
+          <a href="https://github.com/JoshuaLicense/testSQL">Powered by testSQL</a>
+        </footer>
+      </div>
+    </div>
 
     <!-- jQuery first, then Tether, then Bootstrap JS. -->
     <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
