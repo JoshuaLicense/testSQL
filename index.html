@@ -6,13 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css" integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.0.0-alpha.6/css/bootstrap.min.css">
 
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 
     <!-- CodeMirror -->
-    <link rel="stylesheet" href="http://codemirror.net/lib/codemirror.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.27.4/codemirror.min.css" />
 
     <!-- Site styling -->
     <link rel="stylesheet" href="css/main.css">
@@ -21,16 +21,7 @@
     <title>Demo &#8231 testSQL</title>
   </head>
   <body>
-<!--
-    <div class="ts-tutorial-overlay"> </div>
-    <div class="popover popover-top ts-tutorial-popover">
-      <h3 class="popover-title">Popover top</h3>
-      <div class="popover-content">
-        <p>Sed posuere consectetur est at lobortis. Aenean eu leo quam. Pellentesque ornare sem lacinia quam venenatis vestibulum.</p>
-      </div>
-    </div>
-  -->
-    <div class="container-fluid">
+    <div class="container-fluid bg-faded">
       <div class="row">
         <div class="col-md-3 col-lg-2 hidden-sm-down sidebar pt-4 bg-faded">
           <h6 class="pb-3 text-center">Database Schema</h6>
@@ -91,27 +82,27 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.4.0/js/tether.min.js" integrity="sha384-DztdAPBWPRXSA/3eYEEUWrWCy7G5KFbe8fFjk5JAIxUYHKkDx6Qin1DkWx51bBrb" crossorigin="anonymous"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/js/bootstrap.min.js" integrity="sha384-vBWWzlZJ8ea9aCX4pEW3rVHjgjt7zpkNpZk+02D9phzyeVkE+jo0ieGizqPLForn" crossorigin="anonymous"></script>
 
-    <script src="http://codemirror.net/lib/codemirror.js"></script>
-    <script src="http://codemirror.net/mode/sql/sql.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.27.4/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.27.4/mode/sql/sql.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-cookie/2.1.4/js.cookie.min.js"></script>
-    <!-- Site scripts, sql.js first -->
-    <script src="js/sql.js"></script>
-    <script src="js/main.js"></script>
-    <script src="js/identity.js"></script>
-    <script>
-    // load while database is getting loaded
-    let identity = new Identity();
-    console.log(identity.login('abc', 'abc'));
 
+    <script src="js/jquery-ui.min.js"></script>
+    <script src="js/jquery.ui.touch-punch.min.js"></script>
+
+    <!-- Site scripts, sql.js first -->
+    <script>
     const input = CodeMirror.fromTextArea(document.getElementById('ts-input'), {
       mode: 'text/x-mysql',
       lineWrapping: true,
       lineNumbers: true,
       theme: 'default',
     });
-
     </script>
-    <script src="js/question.functions.js" async></script>
-    <script src="js/questions.js" async></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/0.4.0/js/sql.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/identity.js"></script>
+    <script src="js/question.functions.js"></script>
+    <script src="js/questions.js"></script>
   </body>
 </html>
