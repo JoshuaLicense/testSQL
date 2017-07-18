@@ -15,6 +15,7 @@ define('HTTP_CODE', array(
   'BAD_REQUEST' => 400,
   'UNAUTHORIZED' => 401,
   'NOT_FOUND' => 404,
+  'SERVER_ERROR' => 500,
 ));
 
 $username = $_GET['username'] ?? $_POST['username'] ?? exit(http_response_code(HTTP_CODE['BAD_REQUEST']));
@@ -23,7 +24,7 @@ $password = $_GET['password'] ?? $_POST['password'] ?? exit(http_response_code(H
 require('db.inc.php');
 
 $db = new Database();
-$db->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
+//$db->setAttribute( PDO::ATTR_ERRMODE, PDO::ERRMODE_WARNING );
 
 $stmt = $db->prepare('SELECT `ID`, `Username`, `Password`, `DatabaseName` FROM `User` WHERE `Username` = :username');
 $stmt->execute(array(':username' => $username));
@@ -70,7 +71,7 @@ if($user) {
 
       setcookie('user-jwt', $jwt);
     } catch (Exception $e) {
-      exit($e);
+      exit(http_response_code(HTTP_CODE['SERVER_ERROR']));
     }
 
     if($user['DatabaseName']) {

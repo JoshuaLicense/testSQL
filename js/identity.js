@@ -31,19 +31,71 @@ class Identity {
         const $password = $(`#ts-password`);
 
         if(this.status === 400) { // not set when sent to server
+          addModalValidation($username, `danger`, `Incorrect username or password!`);
+          addModalValidation($password, `danger`, `Incorrect username or password!`);
+          reject();
+        }
+
+        if(this.status === 401) { // credentials not correct
           addModalValidation($username, `danger`, `Please enter a username!`);
           addModalValidation($password, `danger`, `Please enter a password!`);
           reject();
         }
 
-        if(this.status === 401) { // credentials not correct
-            addModalValidation($username, `danger`, `Incorrect username or password!`);
-            addModalValidation($password, `danger`, `Incorrect username or password!`);
-            reject();
-        }
-
         if(this.status === 404) { // no saved database or not found
           resolve();
+        }
+      };
+
+      xhr.send();
+    });
+  }
+
+  signup(email, username, password) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      xhr.open(`GET`, `signup.php?email=${email}&username=${username}&password=${password}`)
+
+      xhr.onload = function(e) {
+        if(this.status === 200) {
+          const uint8 = new Uint8Array(this.response);
+          testSQL.loadUint8Array(uint8, resolve, reject);
+
+          resolve();
+        }
+
+        const $email = $(`#ts-email`);
+        const $username = $(`#ts-username`);
+        const $password = $(`#ts-password`);
+
+        if(this.status === 400) { // not set when sent to server
+          addModalValidation($email, `danger`, `Please enter an email!`);
+          addModalValidation($username, `danger`, `Please enter a username!`);
+          addModalValidation($password, `danger`, `Please enter a password!`);
+          reject();
+        }
+
+        if(this.status === 401) { // this should never occur unless the request got tampered with!
+          addModalValidation($email, `danger`, `Invalid pattern submitted to server!`);
+          addModalValidation($username, `danger`, `Invalid pattern submitted to server!`);
+          addModalValidation($password, `danger`, `Invalid pattern submitted to server!`);
+          reject();
+        }
+
+        if(this.status === 409) { // Username / Email taken
+          if(this.response == 'username') {
+            addModalValidation($username, `danger`, `Username already in-use!`);
+          }
+          if(this.response == 'email') {
+            addModalValidation($email, `danger`, `Email already in-use!`);
+          }
+          reject();
+        }
+
+        if(this.status === 500) {
+          alert(`Error 500: Server error!`);
+          reject();
         }
       };
 
@@ -210,9 +262,9 @@ userActions.signup.onClick = () => {
     </div>
     <div class="form-group">
       <label for="ts-username">Username</label>
-      <input type="text" class="form-control" id="ts-username" placeholder="Enter a username" pattern="[A-Za-z0-9]{8,20}" required>
+      <input type="text" class="form-control" id="ts-username" placeholder="Enter a username" pattern="[A-Za-z0-9-_]{8,20}" required>
       <div class="form-control-feedback"></div>
-      <small class="form-text text-muted">Your username can be between 8-20 characters long, containing only letters and numbers.</small>
+      <small class="form-text text-muted">Your username can be between 8-20 characters long, containing only letters, numbers, underscores, and dashes.</small>
     </div>
     <div class="form-group">
       <label for="ts-password">Password</label>
