@@ -1,0 +1,42 @@
+/*
+ * Main content
+ */
+
+main {
+  background-color: white;
+}
+
+
+/*
+ * Sidebar
+ */
+.sidebar {
+  border-left: 1px solid #f7f7f7;
+}
+
+.sidebar-resize {
+
+}
+
+.sidebar-resize h6 {
+  font-size: 100%;
+  white-space: nowrap;
+  -webkit-transform: translate(-45px, -11px) rotate(90deg);
+  transform: translate(0, 0rem) rotate(90deg);
+  text-transform: uppercase;
+}
+
+.sidebar.skinny h6 {
+  -webkit-transform: translate(-45px, -11px) rotate(90deg) scale(0.8);
+  transform: translate(-10px, -0px) rotate(90deg) scale(0.8);
+}
+
+.sidebar h6 {
+  border-bottom: 1px solid #eee;
+}
+
+ @media (max-width: 767px) {
+   .sidebar {
+
+   }
+ }

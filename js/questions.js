@@ -112,7 +112,7 @@ class Question {
 
   markCompleted(number) {
     ts.db.exec('UPDATE `ts-questions` SET `ts-completed` = 1 WHERE `ts-number` = ' + number);
-    console.log(`marking`, ts.db.getRowsModified());
+
     $(`#ts-q${number}`).removeClass(`btn-secondary`).addClass(`btn-success`);
 
     // next unanswered question (if exists)
@@ -130,7 +130,7 @@ class Question {
       let Text = questionInfo.question;
       let isCompleted = questionInfo.completed;
 
-      html = html + `<button type="button" class="btn ${currentQuestion === Number ? 'active' : ''} ${isCompleted ? 'btn-success' : 'btn-secondary'}" id="ts-q${Number}" data-number="${Number}" data-text="${Text}" data-theme="${Theme}" data-isCompleted="${isCompleted}" tabindex="${Number}">${Number}</button>`;
+      html = html + `<button type="button" class="btn ${currentQuestion === Number ? 'active' : ''} ${isCompleted ? 'btn-success' : 'btn-dark'}" id="ts-q${Number}" data-number="${Number}" data-text="${Text}" data-theme="${Theme}" data-isCompleted="${isCompleted}" tabindex="${Number}">${Number}</button>`;
     }
 
     $(`#ts-question-numbers`).html(html);
@@ -138,7 +138,7 @@ class Question {
 
   display(questionNumber) {
     let questionInfo = $(`#ts-q${questionNumber}`).data();
-    if(typeof questionInfo.number !== `undefined`) {
+    if(typeof questionInfo !== `undefined`) {
       Cookies.set(`CurrentQuestion`, questionNumber);
       currentQuestion = questionNumber;
 
@@ -147,7 +147,7 @@ class Question {
       $(`#ts-q${questionNumber}`).addClass('active');
 
       let cardHeader = questionInfo.iscompleted ? `<div class="float-right"><i class="fa fa-check" aria-hidden="true" style="color: #5cb85c;"></i></div>` : ``;
-      cardHeader = cardHeader + `Question ${questionInfo.number} - ${questionInfo.theme}`;
+      cardHeader = cardHeader + questionInfo.theme;
       $(`#ts-questions .card-header`).html(cardHeader);
       $(`#ts-questions .card-text`).html(questionInfo.text);
     }
@@ -164,8 +164,8 @@ class Question {
   validateInput(inputSQL) {
     // Get the question, based on the current question (COOKIE)
     let questionNumber = Cookies.get(`CurrentQuestion`);
-    const { number, theme, question, answer, keywords, statement, isCompleted, } = this.get(questionNumber);
-    console.log(isCompleted);
+    const { number, theme, question, answer, keywords, statement, completed, } = this.get(questionNumber);
+
     /*
      * Step 1:  Constraint checking
      */

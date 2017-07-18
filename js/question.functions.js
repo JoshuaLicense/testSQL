@@ -70,6 +70,7 @@ const getSpecificColumns = (x, sameTable, dataType, isNullable) => {
       }
 
       if(typeof dataType !== `undefined`) {
+        //console.log(`datatype: ${shuffledColumns[j][2].indexOf(dataType) === -1}`);
         if(shuffledColumns[j][2].indexOf(dataType) !== -1) {
           result.push({tbl : getTables[i], col : shuffledColumns[j]});
           continue;
@@ -79,7 +80,7 @@ const getSpecificColumns = (x, sameTable, dataType, isNullable) => {
       result.push({tbl : getTables[i], col : shuffledColumns[j]})
     }
 
-    if(sameTable && result.length < y) result.length = 0;
+    if(typeof sameTable !== `undefined` && result.length < y) result.length = 0;
   }
   if(result.length > 0) {
     return result;
@@ -142,30 +143,36 @@ const getXRowsFrom = (tbl, col, x) => {
  **/
 
 const basicSelect = () => {
-  const tbl_name = getXTables(1);
+  const [ tbl_name ] = getXTables(1);
 
-  let question = `Select ${empasize(`everything`)} from the table ${empasize(tbl_name)}`;
-  let answer = `SELECT * FROM "${tbl_name}"`;
+  const question = `Select all the rows and columns from the table ${empasize(tbl_name)}`;
+  const answer = `SELECT * FROM "${tbl_name}"`;
 
   return { question, answer };
 }
 
 const specificSelect = () => {
-  const get = getSpecificColumns(getRandomInt(1, 2), true);
-  //let f = getForeignColumns(3);
-  //const rows = getXRowsFrom(get[0].tbl, get[0].col, 3);
+  const [ { tbl : [tbl_name ], col : [, col_name] } ] = getSpecificColumns(1);
+  console.log(tbl_name)
+  const question = `Select only the ${empasize(col_name)} rows in the table ${empasize(tbl_name)}`;
+  const answer = `SELECT "${col_name}" FROM "${tbl_name}"`;
 
-  const getColumns = get.map((el) => { return el.col[1] });
+  return { question, answer };
+}
 
-  let question = `Select the column(s) ${empasize(getColumns.join(`, `))} from the table ${empasize(get[0].tbl)}`;
-  let answer = `SELECT "${getColumns.join(`", "`)}" FROM "${get[0].tbl}"`;
+const whereClause = () => {
+  const [ { tbl : [tbl_name], col : [, col_name] }, { col : [, select_col_name]} ] = getSpecificColumns(2);
+  const [ { values : [row_value] } ] = getXRowsFrom(tbl_name, col_name, 1);
+
+  const question = `Select all ${empasize(select_col_name)} rows where ${empasize(col_name)} is ${empasize(row_value)} in the table ${empasize(tbl_name)}`;
+  const answer = `SELECT "${select_col_name}" FROM "${tbl_name}" WHERE "${col_name}" = '${row_value}'`;
 
   return { question, answer };
 }
 
 /**
  * Array of objects containing information about the questions
- * The ordering is the order that they will appear
+ * Must follow a linear pattern with regards to numbering (no gaps!)
  * !! Must be after the function declarations !!
  **/
 let questionFunctions = [
@@ -176,8 +183,12 @@ let questionFunctions = [
   },
   {
     number : 2,
-    theme : `Selecting specific columns in a SELECT operation`,
+    theme : `Selecting a specific column in a SELECT operation`,
     func: specificSelect,
   },
+  {
+    number : 3,
+    theme : `Introducing the WHERE clause`,
+    func: whereClause,
+  },
 ];
-
