@@ -1,5 +1,64 @@
 'use strict';
 
+let currentQuestion = parseInt(Cookies.get(`CurrentQuestion`)) || 1;
+let question;
+
+testSQLPromise.then(() => {
+  question = new Question();
+
+  $(`main`).prepend(html);
+
+  question.displayNumbers();
+
+  // load the current question
+  question.display(currentQuestion);
+});
+
+// create the questions.js html
+let html = `
+<div class="row"><div class="col">
+  <div class="btn-group btn-group-sm mb-1" id="ts-question-numbers" role="group" aria-label="Questions"> </div>
+  <div class="card" id="ts-questions">
+    <h6 class="card-header"></h6>
+    <div class="card-block">
+      <p class="card-text ts-loading">Loading questions<span>.</span><span>.</span><span>.</span></p>
+    </div>
+  </div>
+</div>`;
+
+$(`body`).on(`click`, `#ts-question-numbers button`, function() {
+  let newQuestion = $(this).data(`number`);
+
+  if(currentQuestion === newQuestion) {
+    return;
+  }
+
+  currentQuestion = question.display(newQuestion) || currentQuestion;
+});
+
+// binding arrow keys for improved accessibility
+// e.which for cross-broswer compatability
+// http://api.jquery.com/event.which/
+// TODO: Move top part
+$(document).keydown(function(e) {
+  // don't call if cursor inside textarea
+  if ($(e.target).is('textarea')) {
+    // both enter key and ctrl key
+    if (e.which == 13 && e.ctrlKey) {
+      // execute the sql
+      ts.executeInput(editable.getValue());
+    }
+  } else {
+    if (e.which == 37) { // left arrow
+      // simulate a click of the previous question
+      currentQuestion = question.display(currentQuestion - 1) || currentQuestion;
+    } else if (e.which == 39) { // right arrow
+      // simulate a click of the next question
+      currentQuestion = question.display(currentQuestion + 1) || currentQuestion;
+    }
+  }
+});
+
 class Question {
   constructor() {
     this.initialize();
@@ -22,6 +81,7 @@ class Question {
     ts.importFile = (file) => {
       _importFile(file).then(() => {
         this.refresh();
+        ts.save();
       },
       (error) => {
         console.log(error);
@@ -93,9 +153,6 @@ class Question {
     let stmt = ts.db.prepare(`INSERT INTO \`ts-questions\` VALUES (?, ?, ?, ?, ?, ?, NULL)`, [number, theme, question, answer, keywords, statement]);
     stmt.step();
     stmt.free();
-
-    ts.save();
-    // TODO: If logged in, save to their file
   }
 
   isCompleted(number) {
@@ -273,63 +330,3 @@ class Question {
     return true;
   }
 }
-
-let question;
-
-let currentQuestion = parseInt(Cookies.get(`CurrentQuestion`)) || 1;
-
-// create the questions.js html
-let html = `
-<div class="row"><div class="col">
-  <div class="btn-group btn-group-sm mb-1" id="ts-question-numbers" role="group" aria-label="Questions"> </div>
-  <div class="card" id="ts-questions">
-    <h6 class="card-header"></h6>
-    <div class="card-block">
-      <p class="card-text ts-loading">Loading questions<span>.</span><span>.</span><span>.</span></p>
-    </div>
-  </div>
-</div>`;
-
-$(document).ready(function() {
-  let question = new Question();
-
-  $(`main`).prepend(html);
-
-  question.displayNumbers();
-
-  // load the current question
-  question.display(currentQuestion);
-
-  $(`body`).on(`click`, `#ts-question-numbers button`, function() {
-    let newQuestion = $(this).data(`number`);
-
-    if(currentQuestion === newQuestion) {
-      return;
-    }
-
-    currentQuestion = question.display(newQuestion) || currentQuestion;
-  });
-
-  // binding arrow keys for improved accessibility
-  // e.which for cross-broswer compatability
-  // http://api.jquery.com/event.which/
-  // TODO: Move top part
-  $(document).keydown(function(e) {
-    // don't call if cursor inside textarea
-    if ($(e.target).is('textarea')) {
-      // both enter key and ctrl key
-      if (e.which == 13 && e.ctrlKey) {
-        // execute the sql
-        ts.executeInput(editable.getValue());
-      }
-    } else {
-      if (e.which == 37) { // left arrow
-        // simulate a click of the previous question
-        currentQuestion = question.display(currentQuestion - 1) || currentQuestion;
-      } else if (e.which == 39) { // right arrow
-        // simulate a click of the next question
-        currentQuestion = question.display(currentQuestion + 1) || currentQuestion;
-      }
-    }
-  });
-});

@@ -16,34 +16,29 @@ class Identity {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
-      xhr.open(`GET`, `login.php?username=${username}&password=${password}`);
-      xhr.responseType = `arraybuffer`;
+      xhr.open(`POST`, `../src/routing.php?action=login&username=${username}&password=${password}`);
 
       xhr.onload = function(e) {
         if(this.status === 200) {
-          const uint8 = new Uint8Array(this.response);
-          testSQL.loadUint8Array(uint8, resolve, reject);
-
           resolve();
         }
 
         const $username = $(`#ts-username`);
         const $password = $(`#ts-password`);
 
-        if(this.status === 400) { // not set when sent to server
-          addModalValidation($username, `danger`, `Incorrect username or password!`);
-          addModalValidation($password, `danger`, `Incorrect username or password!`);
+        if(this.status === 400) {
+          addModalValidation(`One or more fields are not valid!`);
           reject();
         }
 
-        if(this.status === 401) { // credentials not correct
-          addModalValidation($username, `danger`, `Please enter a username!`);
-          addModalValidation($password, `danger`, `Please enter a password!`);
+        if(this.status === 401) {
+          addModalValidation(`Incorrect username or password!`);
           reject();
         }
 
-        if(this.status === 404) { // no saved database or not found
-          resolve();
+        if(this.status === 500) {
+          alert(this.response);
+          reject();
         }
       };
 
@@ -70,25 +65,21 @@ class Identity {
         const $password = $(`#ts-password`);
 
         if(this.status === 400) { // not set when sent to server
-          addModalValidation($email, `danger`, `Please enter an email!`);
-          addModalValidation($username, `danger`, `Please enter a username!`);
-          addModalValidation($password, `danger`, `Please enter a password!`);
+          addModalValidation(`One or more fields are not valid!`);
           reject();
         }
 
         if(this.status === 401) { // this should never occur unless the request got tampered with!
-          addModalValidation($email, `danger`, `Invalid pattern submitted to server!`);
-          addModalValidation($username, `danger`, `Invalid pattern submitted to server!`);
-          addModalValidation($password, `danger`, `Invalid pattern submitted to server!`);
+          addModalValidation(`One or more fields are not valid!`);
           reject();
         }
 
         if(this.status === 409) { // Username / Email taken
-          if(this.response == 'username') {
-            addModalValidation($username, `danger`, `Username already in-use!`);
+          if(this.response == 'username-taken') {
+            addModalInputValidation($username, `Username already in-use!`);
           }
-          if(this.response == 'email') {
-            addModalValidation($email, `danger`, `Email already in-use!`);
+          if(this.response == 'username-taken') {
+            addModalInputValidation($email, `Email already in-use!`);
           }
           reject();
         }
@@ -101,6 +92,42 @@ class Identity {
 
       xhr.send();
     });
+  }
+
+  save() {
+    const xhr = new XMLHttpRequest();
+
+    xhr.open(`POST`, `../src/routing.php?action=save`);
+
+    xhr.onload = function(e) {
+      if(this.status === 200) {
+        alert('SAVED');
+        resolve();
+      }
+
+      reject(Error(this.response));
+    }
+
+    const blob = new Blob([ts.db.export()], {type: `application/x-sqlite-3`});
+    xhr.send(blob);
+  }
+
+
+  load(id) {
+    const xhr = new XMLHttpRequest();
+
+    xhr.open(`POST`, `../src/routing.php?action=load&id=${id}`);
+    xhr.responseType = `arraybuffer`;
+
+    xhr.onload = function(e) {
+      if(this.status === 200) {
+        resolve(new Uint8Array(this.response));
+      }
+
+      reject(Error(this.reponse));
+    }
+
+    xhr.send();
   }
 
   static decodeJWT(token) {
@@ -150,7 +177,7 @@ let userActions = {
 };
 
 userActions.login.onSubmit = () => {
-  clearModalValidation();
+  clearAllModalValidation();
 
   const $username = $(`#ts-username`);
   const $password = $(`#ts-password`);
@@ -160,18 +187,20 @@ userActions.login.onSubmit = () => {
   if(!$username[0].validity.valid) {
     hasErrors = true;
 
-    addModalValidation($username, `danger`, $username[0].validationMessage);
+    addModalInputValidation($username, $username[0].validationMessage);
   }
 
   if(!$password[0].validity.valid) {
     hasErrors = true;
 
-    addModalValidation($password, `danger`, $password[0].validationMessage);
+    addModalInputValidation($password, $password[0].validationMessage);
   }
 
   if(hasErrors === false) {
     identity.login($username.val(), $password.val()).then((response) => {
-      const { username } = Identity.decodeJWT(Cookies.get(`user-jwt`));
+      console.log(Cookies.get(`user-jwt`));
+
+      console.log(Identity.decodeJWT(Cookies.get(`user-jwt`)));
 
       // remove the login icon!
       $(`#ts-modal .modal-body`).html(`<small class="text-success">Welcome back, ${username}!</small>`)
@@ -204,7 +233,7 @@ userActions.login.onClick = () => {
 }
 
 userActions.signup.onSubmit = () => {
-  clearModalValidation();
+  clearAllModalValidation();
 
   const $email = $(`#ts-email`);
   const $username = $(`#ts-username`);
@@ -216,30 +245,32 @@ userActions.signup.onSubmit = () => {
   if(!$email[0].validity.valid) {
     hasErrors = true;
 
-    addModalValidation($email, `danger`, $email[0].validationMessage);
+    addModalInputValidation($email, $email[0].validationMessage);
   }
 
   if(!$username[0].validity.valid) {
     hasErrors = true;
 
-    addModalValidation($username, `danger`, $username[0].validationMessage);
+    addModalInputValidation($username, $username[0].validationMessage);
   }
 
   if(!$password[0].validity.valid) {
     hasErrors = true;
 
-    addModalValidation($password, `danger`, $password[0].validationMessage);
+    addModalInputValidation($password, $password[0].validationMessage);
   }
 
   if(!$confirmPassword[0].validity.valid || $confirmPassword.val() !== $password.val()) {
     hasErrors = true;
 
-    addModalValidation($confirmPassword, `danger`, $confirmPassword[0].validationMessage || `Passwords don't match`);
+    addModalInputValidation($confirmPassword, $confirmPassword[0].validationMessage || `Passwords don't match`);
   }
 
   if(hasErrors === false) {
     identity.signup($email.val(), $username.val(), $password.val()).then((response) => {
-      const { username } = Identity.decodeJWT(Cookies.get(`user-jwt`));
+
+      console.log(Cookies.get(`user-jwt`));
+      const u = Identity.decodeJWT(Cookies.get(`user-jwt`));
 
       // remove the modal icon!
       $(`#ts-modal .modal-body`).html(`<small class="text-success">Welcome, ${username}!</small>`)
@@ -307,7 +338,7 @@ const clearUserActions = () => {
 
 // Model
 const universalModal = `
-    <div class="modal" id="ts-modal" tabindex="-1" role="dialog" aria-labelledby="modal-header" aria-hidden="true">
+    <div class="modal fade" id="ts-modal" tabindex="-1" role="dialog" aria-labelledby="modal-header" aria-hidden="true">
       <div class="modal-dialog" role="document">
         <div class="modal-content">
           <div class="modal-header">
@@ -324,19 +355,26 @@ const universalModal = `
 
 const populateModal = (header, body, footer) => {
   $(`#ts-modal .modal-title`).html(header);
-  $(`#ts-modal .modal-body`).html(body);
+  const modalValidation = `<div class="form-feedback alert alert-dismissible" style="display: none;"></div>`;
+  $(`#ts-modal .modal-body`).html(modalValidation + body);
   $(`#ts-modal .modal-footer`).html(footer);
 }
 
-const addModalValidation = ($selector, validationStyle, validationText) => {
+const addModalInputValidation = ($selector, validationText, validationStyle = `danger`) => {
   $selector.parent().addClass(`has-${validationStyle}`);
   $selector.addClass(`form-control-${validationStyle}`)
   $selector.next().html(validationText);
 }
 
-const clearModalValidation = () => {
+const addModalValidation = (validationText, validationStyle = `danger`) => {
+  $(`.form-feedback`).addClass(`alert-${validationStyle}`).html(validationText).show();
+}
+
+const clearAllModalValidation = () => {
   $(`.form-group`).removeClass(`has-danger has-success has-warning`);
   $(`.form-control-feedback`).html(``);
+
+  $(`.form-feedback`).hide();
 }
 
 $(`.icon-nav`).on(`click`, `div.ts-open-actions`, () => {
@@ -344,3 +382,5 @@ $(`.icon-nav`).on(`click`, `div.ts-open-actions`, () => {
 });
 
 let identity = new Identity();
+
+$('#ts-modal').click(() => identity.load(2));

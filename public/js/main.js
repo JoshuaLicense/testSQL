@@ -29,7 +29,7 @@ class testSQL {
 
     // TODO Load default database if can't find session (send back default string)
     // TODO fetch the filename from PHP!
-    xhr.open(`GET`, `Chinook_Sqlite.db`);
+    xhr.open(`GET`, `../resources/Chinook_Sqlite.db`);
     xhr.responseType = 'arraybuffer';
     xhr.onload = function(e) {
       if (xhr.status === 200) {
@@ -64,8 +64,9 @@ class testSQL {
     for (i = 0; i * chunksize < result.length; i = i + 1) {
       strings.push(String.fromCharCode.apply(null, result.subarray(i * chunksize, (i + 1) * chunksize)));
     }
+    console.log(strings.join('').length);
+    console.log(this.db.export().length);
     window.localStorage.setItem('testSQL', strings.join(''));
-    console.log('saved to cache');
   }
 
   static loadUint8Array(uint8, resolve, reject) {
@@ -140,7 +141,7 @@ class testSQL {
  */
 let ts;
 
-testSQL.load().then((response) => {
+let testSQLPromise = testSQL.load().then((response) => {
   // load after the database
   ts = new testSQL({ buffer: response });
 
