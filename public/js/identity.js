@@ -1,13 +1,28 @@
 // Identity class
 class Identity {
   constructor() {
+    this.loggedIn = false;
+
     $(`.icon-nav`).prepend(userActionContainer);
 
-    // TODO: Based on jwt
-    addUserAction([
-      userActions.login,
-      userActions.signup,
-    ]);
+    let encodedJWT = Cookies.get(`UserJWT`)
+    if(encodedJWT) { // Logged in
+      this.loggedIn = true;
+      const JWT = decodeJWT(encodedJWT);
+
+      this.id = JWT.user_id;
+      this.username = JWT.username;
+
+      addUserActions([
+        userActions.manageDatabase,
+        userActions.manageSession,
+      ]);
+    } else { // Not logged in
+      addUserActions([
+        userActions.login,
+        userActions.signup,
+      ]);
+    }
 
     $(`body`).prepend(universalModal);
   }
@@ -129,10 +144,10 @@ class Identity {
 
     xhr.send();
   }
+}
 
-  static decodeJWT(token) {
-    return JSON.parse(atob(token.split(`.`)[1]));
-  }
+const decodeJWT = (token) => {
+  return JSON.parse(atob(token.split(`.`)[1]));
 }
 
 // User actions
@@ -160,19 +175,15 @@ let userActions = {
     icon: `fa-user-plus`,
     heading: `Sign up`,
   },
-  join_session : {
+  manageSession : {
     className: `ts-join-icon`,
-    icon: `fa fa-group`,
-    heading: `Joining a session`,
+    icon: `fa-group`,
+    heading: `Sessions`,
   },
-  create_session : {
-
-  },
-  manage_session : {
-
-  },
-  leave_session : {
-
+  manageDatabase : {
+    className: `ts-save`,
+    icon: `fa-database`,
+    heading: `Databases`,
   },
 };
 
@@ -198,16 +209,17 @@ userActions.login.onSubmit = () => {
 
   if(hasErrors === false) {
     identity.login($username.val(), $password.val()).then((response) => {
-      console.log(Cookies.get(`user-jwt`));
-
-      console.log(Identity.decodeJWT(Cookies.get(`user-jwt`)));
-
       // remove the login icon!
-      $(`#ts-modal .modal-body`).html(`<small class="text-success">Welcome back, ${username}!</small>`)
+      $(`#ts-modal .modal-body`).html(`<small class="text-success">Welcome back, ${$username.val()}!</small>`)
 
       setTimeout(() => $(`#ts-modal`).modal(`hide`), 1000);
 
       clearUserActions();
+
+      addUserActions([
+        userActions.manageDatabase,
+        userActions.manageSession,
+      ]);
     });
   }
 }
@@ -268,16 +280,16 @@ userActions.signup.onSubmit = () => {
 
   if(hasErrors === false) {
     identity.signup($email.val(), $username.val(), $password.val()).then((response) => {
-
-      console.log(Cookies.get(`user-jwt`));
-      const u = Identity.decodeJWT(Cookies.get(`user-jwt`));
-
-      // remove the modal icon!
-      $(`#ts-modal .modal-body`).html(`<small class="text-success">Welcome, ${username}!</small>`)
+      $(`#ts-modal .modal-body`).html(`<small class="text-success">Welcome, ${$username.val()}!</small>`)
 
       setTimeout(() => $(`#ts-modal`).modal(`hide`), 1000);
 
       clearUserActions();
+
+      addUserActions([
+        userActions.manageDatabase,
+        userActions.manageSession,
+      ]);
     });
   }
 }
@@ -315,7 +327,7 @@ userActions.signup.onClick = () => {
   $(`#ts-signup`).off(`click`).on(`click`, userActions.signup.onSubmit)
 }
 
-const addUserAction = (actions) => {
+const addUserActions = (actions) => {
   let html = ``;
 
   for(const {className, icon, heading, onClick} of actions) {
@@ -382,5 +394,3 @@ $(`.icon-nav`).on(`click`, `div.ts-open-actions`, () => {
 });
 
 let identity = new Identity();
-
-$('#ts-modal').click(() => identity.load(2));
