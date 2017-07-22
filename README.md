@@ -1,3 +1,5 @@
+# Currently re-coding the application, please see [here](https://github.com/JoshuaLicense/testSQL/tree/Beta)
+
 # What is testSQL?
 testSQL is an application that is an easy to deploy interactive tuition tool that aids the learning of SQL.
 
