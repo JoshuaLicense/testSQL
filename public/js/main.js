@@ -5,46 +5,67 @@
  * IDEA: Load two seperate databases, barebones, and the full one?
  */
 
+/** Class representing the core application */
 class testSQL {
-  constructor(options = {}) {
-    this.db = new SQL.Database(options.buffer);
-    console.log('object constructor set');
+  /**
+   * Loads the relevant database and creates a database instance
+   * @param {object} arrayBuffer - the database as an array buffer
+   */
+  constructor(arrayBuffer) {
+    this.db = new SQL.Database(arrayBuffer);
   }
 
+  /**
+   * Load a relevant database
+   * @return {object} - returns a promise object
+   */
   static load() {
     return new Promise((resolve, reject) => {
       let cachedDatabase = localStorage.getItem('testSQL');
 
-      // Populate with stored database (cached/file) or use the default one
+      // Delegate to most suitable function
       if(cachedDatabase) {
         this.loadCached(cachedDatabase, resolve, reject);
       } else {
-        testSQL.loadDefault(resolve, reject);
+        this.loadDefault(resolve, reject);
       }
     });
   }
 
+  /**
+   * Load the default database
+   * @param {object} resolve  - the resolve promise object
+   * @param {object} reject   - the reject promise object
+   *
+   * @return {object}         - returns a promise object
+   */
   static loadDefault(resolve, reject) {
     let xhr = new XMLHttpRequest();
 
-    // TODO Load default database if can't find session (send back default string)
-    // TODO fetch the filename from PHP!
-    xhr.open(`GET`, `../resources/Chinook_Sqlite.db`);
-    xhr.responseType = 'arraybuffer';
+    xhr.open(`GET`, `../src/routing.php?action=loadDefault`);
+    xhr.responseType = `arraybuffer`;
+
     xhr.onload = function(e) {
       if (xhr.status === 200) {
-        console.log('Loaded from default.');
         resolve(new Uint8Array(xhr.response));
       } else {
-        reject(Error('Bad, Bad'));
+        reject();
       }
     };
 
     xhr.send();
   }
 
+  /**
+   * Converts a database file (sqlite) into a Uint8Array
+   * @param {string} cachedDatabase - the raw database file
+   * @param {object} resolve        - the resolve promise object
+   * @param {object} reject         - the reject promise object
+   *
+   * @return {object}               - returns a promise object
+   */
   static loadCached(cachedDatabase, resolve, reject) {
-    let result = [];
+    const result = [];
     let i;
     let size;
 
@@ -55,25 +76,35 @@ class testSQL {
     resolve(new Uint8Array(result));
   }
 
+  /**
+   * Converts a Uint8Array to a database file string and saves it in the local storage
+   */
   save() {
-    let result = this.db.export();
-    let strings = [];
+    const result = this.db.export();
+    const strings = [];
+    const chunksize = 0xffff;
     let i;
-    let chunksize = 0xffff;
 
     for (i = 0; i * chunksize < result.length; i = i + 1) {
       strings.push(String.fromCharCode.apply(null, result.subarray(i * chunksize, (i + 1) * chunksize)));
     }
-    console.log(strings.join('').length);
-    console.log(this.db.export().length);
+
     window.localStorage.setItem('testSQL', strings.join(''));
   }
 
-  static loadUint8Array(uint8, resolve, reject) {
+  /**
+   * Converts a database file (sqlite) into a Uint8Array
+   * @param {array} uint8           - the Uint8Array
+   * @param {object} resolve        - the resolve promise object
+   * @param {object} reject         - the reject promise object
+   *
+   * @return {object}               - returns a promise object
+   */
+  loadUint8Array(uint8, resolve, reject) {
     // save the old database if the imported file is corrupt
     const _ts = ts;
 
-    ts = new testSQL({ buffer: uint8 });
+    ts = new testSQL(uint8);
 
     // the scheme will fail to load if the file is not a VALID database
     try {
@@ -90,23 +121,35 @@ class testSQL {
     }
   }
 
+  /**
+   * Imports a database from a local file
+   * @param {object} file           - the file object
+   *
+   * @return {object}               - returns a promise object
+   */
   importFile(file) {
     return new Promise((resolve, reject) => {
       let fileReader = new FileReader();
       fileReader.onload = () => {
         const uint8 = new Uint8Array(fileReader.result);
-        testSQL.loadUint8Array(uint8, resolve, reject);
+        this.loadUint8Array(uint8, resolve, reject);
       }
       fileReader.readAsArrayBuffer(file);
     });
   }
 
-  executeInput(sql, save) {
+  /**
+   * Execute the current textarea input
+   * @param {string}  sql         - the raw database file
+   * @param {boolean} save        - should the database be saved locally
+   */
+  executeInput(sql, save = false) {
     try {
       showOutput(this.db.exec(sql));
 
       let rowsModified = this.db.getRowsModified();
-      // denotes a DELETE, UPDATE, INSERT operation
+
+      // indicates a DELETE, UPDATE, INSERT operation
       if(rowsModified > 0) {
         this.displaySchema();
       }
@@ -121,9 +164,11 @@ class testSQL {
     }
   }
 
+  /**
+   * Display the current schema in the DOM
+   */
   displaySchema() {
-    // TODO: Could cache this?
-    let schema = this.db.exec(`SELECT "tbl_name" FROM "sqlite_master" WHERE "type" = 'table' AND "tbl_name" != "ts-questions"`);
+    const schema = this.db.exec(`SELECT "tbl_name" FROM "sqlite_master" WHERE "type" = 'table' AND "tbl_name" != "ts-questions"`);
     let html = ``;
 
     schema[0].values.forEach((el) => {
@@ -146,13 +191,15 @@ let testSQLPromise = testSQL.load().then((response) => {
   ts = new testSQL({ buffer: response });
 
   ts.displaySchema();
-},
-(error) => {
+}, (error) => {
   console.log(error);
 });
 
-const showOutput = function showOutput(result) {
-  console.log(result);
+/**
+ * Displays the result of the user input in tables
+ * @param {array} result  - the result of the query
+ */
+const showOutput = (result) => {
   let html;
 
   if(result.length > 0) {
@@ -176,10 +223,19 @@ const showOutput = function showOutput(result) {
   $('#ts-result').html(html);
 }
 
-const showResponse = (msg, alertType) => {
-  $('#ts-responses').append(`<div class="alert alert-${alertType || `danger`} mt-1 mb-0 alert-dismissible fade show"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>${msg}</div>`);
+/**
+ * Execute the current textarea input
+ * @param {string}  message         - the message to display inside the alert box
+ * @param {string}  alertType       - the class allocated to the alert box (danger, success, warning)
+ */
+const showResponse = (message, alertType) => {
+  $('#ts-responses').append(`<div class="alert alert-${alertType || `danger`} mt-1 mb-0 alert-dismissible fade show"><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>${message}</div>`);
 }
 
+/**
+ * Execute the current textarea input
+ * @param {boolean}  andInput       - clear the textarea input value too?
+ */
 const clearView = (andInput) => {
   $('#ts-responses > div').remove();
   $('#ts-result').html(`<span class="text-muted">Click "Run SQL" to execute the SQL statement above.</span>`);
@@ -189,11 +245,17 @@ const clearView = (andInput) => {
   }
 }
 
+/**
+ * Clears the applications cookies and the local storage
+ */
 const clearAllLocalStorage = () => {
   localStorage.clear();
   clearCookies();
 }
 
+/**
+ * Clears the applications cookies
+ */
 const clearCookies = () => {
   Object.keys(Cookies.get()).forEach((cookieName) => Cookies.remove(cookieName));
 }
@@ -222,7 +284,7 @@ $(document).ready(function() {
   });
 
   /* Restore icon */
-  $(`.ts-restore-icon`).on(`click`, function() {
+  $(`.ts-restore-icon`).on(`click`, () => {
     testSQL.load().then((response) => {
       clearAllLocalStorage();
 
@@ -230,11 +292,6 @@ $(document).ready(function() {
       ts = new testSQL({ buffer: response });
 
       ts.displaySchema();
-      // TODO: Questions
-    },
-
-    function (error) {
-      console.log(error);
     });
   });
 

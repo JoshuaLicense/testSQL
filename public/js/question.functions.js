@@ -1,19 +1,29 @@
-/** Exception **/
+/**
+ * Exception for question errors
+ * @param {string} message - the response message
+ */
 const QuestionError = function (message) {
   this.message = message;
 }
 
-/** Styling functions **/
-
-const empasize = (string) => {
+/**
+ * Empasize the input
+ * @param {string} input - the string to be empasized
+ *
+ * @return {string} returns the empasized string
+ */
+const empasize = (input) => {
   return `<em>${string}</em>`;
 }
 
-/** Dynamic question helper functions **/
+// Dynamic question helper functions
 
 /**
  * Find the question in the array of objects
- **/
+ * @param {integer} number - the question number to find
+ *
+ * @return {object} - the question object { number, theme, func }
+ */
 const findQuestionInArray = (number) => {
   return questionFunctions.find((question) => {
     return question.number === parseInt(number);
@@ -22,27 +32,41 @@ const findQuestionInArray = (number) => {
 
 /**
  * Shuffles array in place.
- * @param {Array} a items The array containing the items.
+ * @param {array} array  - the array containing the items.
+ *
+ * @return {array} - the shuffled array
  **/
- const shuffle = (a) => {
+ const shuffle = (array) => {
      let j, x, i;
-     for (i = a.length; i; i--) {
+     for (i = array.length; i; i--) {
          j = Math.floor(Math.random() * i);
-         x = a[i - 1];
-         a[i - 1] = a[j];
-         a[j] = x;
+         x = array[i - 1];
+         array[i - 1] = array[j];
+         array[j] = x;
      }
-     return a;
+     return array;
  }
 
 /**
  * Getting a random integer between two values, inclusive
  * https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/random
- **/
+ * @param {integer} min - the minimum range
+ * @param {integer} max - the maximum range
+ *
+ * @returns {integer} - the random int
+ */
  const getRandomInt = (min, max) => {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+/**
+ * Get `x` amount of tables
+ * @param {integer} x - the amount of tables wanted
+ *
+ * @throws QuestionError - if no tables were found
+ *
+ * @returns {array} - array of table(s)
+ */
 const getXTables = (x) => {
   const getTables = ts.db.exec(`SELECT "tbl_name" FROM "sqlite_master" WHERE "type" = 'table' AND "tbl_name" != "ts-questions" ORDER BY RANDOM() LIMIT ${x}`);
   if(getTables[0].values.length > 0) {
@@ -52,6 +76,17 @@ const getXTables = (x) => {
   throw new QuestionError(`No tables found in the database`);
 }
 
+/**
+ * Get columns from the database
+ * @param {integer} x           - the amount of columns wanted
+ * @param {boolean} sameTable   - find columns from the same table?
+ * @param {string} dataType     - the desired column data type
+ * @param {boolean} isNullable  - find only nullable columns?
+ *
+ * @throws QuestionError - if no suitable columns were found
+ *
+ * @returns {array} - array of suitable column(s)
+ */
 const getSpecificColumns = (x, sameTable, dataType, isNullable) => {
   const getTables = getXTables(1000);
   const y = x || 1;
@@ -64,7 +99,6 @@ const getSpecificColumns = (x, sameTable, dataType, isNullable) => {
     for(let j = 0; j < shuffledColumns.length && y > result.length; j = j + 1) {
       if(typeof isNullable !== `undefined`) {
         if(shuffledColumns[j][3] !== +isNullable) {
-          //console.log(`matches null`);
           continue;
         }
       }
@@ -89,6 +123,14 @@ const getSpecificColumns = (x, sameTable, dataType, isNullable) => {
   throw new QuestionError(`A suitable column with the parameters (x: ${x}, sameTable: ${sameTable}, dataType: ${dataType}, isNullable: ${isNullable})`);
 }
 
+/**
+ * Get columns that are linked (foreign keys)
+ * @param {integer} x           - the amount of columns wanted
+ *
+ * @throws QuestionError - if no suitable columns were found
+ *
+ * @returns {array} - array of suitable column(s)
+ */
 const getForeignColumns = (x) => {
   const getTables = getXTables(1000);
   const y = x || 1;
@@ -98,7 +140,6 @@ const getForeignColumns = (x) => {
     const getForeignKeys = ts.db.exec(`PRAGMA foreign_key_list(${getTables[i]})`);
 
     if(getForeignKeys.length > 0) {
-      console.log(getForeignKeys[0].values.length);
       if(getForeignKeys[0].values.length < y) {
         continue;
       }
@@ -127,6 +168,17 @@ const getForeignColumns = (x) => {
   throw new QuestionError(`A foreign key was not found`);
 }
 
+
+/**
+ * Get columns that are linked (foreign keys)
+ * @param {integer} tbl    - the table to fetch the rows from
+ * @param {integer} col    - the column to fetch the rows from
+ * @param {integer} x      - the amount of rows wanted
+ *
+ * @throws QuestionError - if not enough rows exist
+ *
+ * @returns {array} - array of suitable column(s)
+ */
 const getXRowsFrom = (tbl, col, x) => {
   const y = x || 1;
   const getRows = ts.db.exec(`SELECT "${col}" FROM "${tbl}" ORDER BY RANDOM() LIMIT ${y}`);
@@ -138,10 +190,7 @@ const getXRowsFrom = (tbl, col, x) => {
   return getRows;
 }
 
-/**
- * Dynamic question functions
- **/
-
+// Dynamic question functions
 const basicSelect = () => {
   const [ tbl_name ] = getXTables(1);
 
@@ -170,11 +219,9 @@ const whereClause = () => {
   return { question, answer };
 }
 
-/**
- * Array of objects containing information about the questions
- * Must follow a linear pattern with regards to numbering (no gaps!)
- * !! Must be after the function declarations !!
- **/
+// Array of objects containing information about the questions
+// Must follow a linear pattern with regards to numbering (no gaps!)
+// !! Must be after the function declarations !!
 let questionFunctions = [
   {
     number : 1,

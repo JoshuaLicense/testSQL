@@ -1,45 +1,78 @@
-// Identity class
+'use strict';
+
+/** Class representing the identity module */
 class Identity {
+  /**
+   * Initializes the identity class module, renders the additional actions
+   */
   constructor() {
     this.loggedIn = false;
+
+    const userActionContainer = `
+    <div class="ts-user-actions-container">
+        <div class="icon ts-open-actions" role="button">
+          <i class="fa fa-cog"></i>
+          <h6>User Actions</h6>
+        </div>
+        <div class="d-flex ts-user-actions"> </div>
+      </div>`;
 
     $(`.icon-nav`).prepend(userActionContainer);
 
     let encodedJWT = Cookies.get(`UserJWT`)
-    if(encodedJWT) { // Logged in
+    if(encodedJWT) {
+      // Logged in
       this.loggedIn = true;
+
+      // get the user's id and username from the JWT
       const JWT = decodeJWT(encodedJWT);
 
       this.id = JWT.user_id;
       this.username = JWT.username;
 
-      addUserActions([
-        userActions.manageDatabase,
-        userActions.manageSession,
-      ]);
-    } else { // Not logged in
-      addUserActions([
-        userActions.login,
-        userActions.signup,
-      ]);
+      addUserActions([ userActions.manageDatabase, userActions.manageSession, ]);
+    } else {
+      // Not logged in
+      addUserActions([ userActions.login, userActions.signup, ]);
     }
+
+    // insert a blank modal into the DOM
+    const universalModal = `
+      <div class="modal fade" id="ts-modal" tabindex="-1" role="dialog" aria-labelledby="modal-header" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="model-header"></h5>
+              <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body"></div>
+            <div class="modal-footer"></div>
+          </div>
+        </div>
+      </div>`;
 
     $(`body`).prepend(universalModal);
   }
 
+  /**
+   * Login using username and password
+   * @param {string} username - the username
+   * @param {string} password - the password
+   *
+   * @return {object} - returns a promise object
+   */
   login(username, password) {
     return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
 
+      const xhr = new XMLHttpRequest();
       xhr.open(`POST`, `../src/routing.php?action=login&username=${username}&password=${password}`);
 
       xhr.onload = function(e) {
         if(this.status === 200) {
           resolve();
         }
-
-        const $username = $(`#ts-username`);
-        const $password = $(`#ts-password`);
 
         if(this.status === 400) {
           addModalValidation(`One or more fields are not valid!`);
@@ -52,7 +85,7 @@ class Identity {
         }
 
         if(this.status === 500) {
-          alert(this.response);
+          addModalValidation(this.response);
           reject();
         }
       };
@@ -61,6 +94,14 @@ class Identity {
     });
   }
 
+  /**
+   * Signup and login to application
+   * @param {string} email    - the email
+   * @param {string} username - the username
+   * @param {string} password - the password
+   *
+   * @return {object} - returns a promise object
+   */
   signup(email, username, password) {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -79,28 +120,29 @@ class Identity {
         const $username = $(`#ts-username`);
         const $password = $(`#ts-password`);
 
-        if(this.status === 400) { // not set when sent to server
+        if(this.status === 400) {
+          addModalValidation(`One or more fields are not populated!`);
+          reject();
+        }
+
+        if(this.status === 401) {
+          // validation failed server side
           addModalValidation(`One or more fields are not valid!`);
           reject();
         }
 
-        if(this.status === 401) { // this should never occur unless the request got tampered with!
-          addModalValidation(`One or more fields are not valid!`);
-          reject();
-        }
-
-        if(this.status === 409) { // Username / Email taken
+        if(this.status === 409) {
           if(this.response == 'username-taken') {
             addModalInputValidation($username, `Username already in-use!`);
           }
-          if(this.response == 'username-taken') {
+          if(this.response == 'email-taken') {
             addModalInputValidation($email, `Email already in-use!`);
           }
           reject();
         }
 
         if(this.status === 500) {
-          alert(`Error 500: Server error!`);
+          addModalValidation(this.response);
           reject();
         }
       };
@@ -109,6 +151,11 @@ class Identity {
     });
   }
 
+  /**
+   * Save the current database to the database
+   *
+   * @return {object} - returns a promise object
+   */
   save() {
     const xhr = new XMLHttpRequest();
 
@@ -127,7 +174,12 @@ class Identity {
     xhr.send(blob);
   }
 
-
+  /**
+   * Load a database
+   * @param {integer} id    - the primary key (id) of the database
+   *
+   * @return {object} - returns a promise object
+   */
   load(id) {
     const xhr = new XMLHttpRequest();
 
@@ -146,22 +198,93 @@ class Identity {
   }
 }
 
+/**
+ * Decode the JSON Web Token (JWT)
+ * @param {string} token - the web token
+ *
+ * @return {object} - returns the payload from the JWT
+ */
 const decodeJWT = (token) => {
   return JSON.parse(atob(token.split(`.`)[1]));
 }
 
-// User actions
-const userActionContainer = `
-<div class="ts-user-actions-container">
-    <div class="icon ts-open-actions" role="button">
-      <i class="fa fa-cog"></i>
-      <h6>User Actions</h6>
-    </div>
-    <div class="d-flex ts-user-actions"> </div>
-  </div>`;
+/**
+ * Adds action icons to the "User actions" sidebar icon
+ * @param {array} actions - the array of objects containing icon information
+ */
+const addUserActions = (actions) => {
+  let html = ``;
+
+  for(const {className, icon, heading, onClick} of actions) {
+    html = `${html}
+      <div class="icon ${className}" ${onClick ? `role="button" data-toggle="modal" data-target="#ts-modal"` : ``}>
+        <i class="fa ${icon}"></i>
+        <h6>${heading}</h6>
+      </div>`;
+    if(onClick) {
+      $(`.ts-user-actions`).on(`click`, `.${className}`, onClick);
+    }
+  }
+
+  $(`.ts-user-actions`).append(html);
+}
+
+/**
+ * Removes all the action icon from the "User actions" sidebar icon
+ */
+const clearUserActions = () => {
+  $(`.ts-user-actions`).html(``);
+}
+
+/**
+ * Populate the modal before showing
+ * @param {string} header   - the header text of the model
+ * @param {string} body     - the html body of the model
+ * @param {string} footer   - the footer of the model
+ */
+const populateModal = (header, body, footer) => {
+  $(`#ts-modal .modal-title`).html(header);
+  const modalValidation = `<div class="form-feedback alert alert-dismissible" style="display: none;"></div>`;
+  $(`#ts-modal .modal-body`).html(modalValidation + body);
+  $(`#ts-modal .modal-footer`).html(footer);
+}
+
+/**
+ * Add validation response to an input in the model
+ * @param {string} $selector        - the jQuery object representing the DOM object of the input
+ * @param {string} validationText   - the text that will be displayed
+ * @param {string} validationStyle  - the style of validation (e.g. danger, success, warning)
+ */
+const addModalInputValidation = ($selector, validationText, validationStyle = `danger`) => {
+  $selector.parent().addClass(`has-${validationStyle}`);
+  $selector.addClass(`form-control-${validationStyle}`)
+  $selector.next().html(validationText);
+}
+
+/**
+ * Add validation response to the model
+ * @param {string} validationText   - the text that will be displayed
+ * @param {string} validationStyle  - the style of validation (e.g. danger, success, warning)
+ */
+const addModalValidation = (validationText, validationStyle = `danger`) => {
+  $(`.form-feedback`).addClass(`alert-${validationStyle}`).html(validationText).show();
+}
+
+/**
+ * Clears all the validation responses in the model
+ * @param {string} $selector        - the jQuery object representing the DOM object of the input
+ * @param {string} validationText   - the text that will be displayed
+ * @param {string} validationStyle  - the style of validation (e.g. danger, success, warning)
+ */
+const clearAllModalValidation = () => {
+  $(`.form-group`).removeClass(`has-danger has-success has-warning`);
+  $(`.form-control-feedback`).html(``);
+
+  $(`.form-feedback`).hide();
+}
 
 // User actions object of objects
-let userActions = {
+const userActions = {
   login : {
     className: `ts-login-icon`,
     icon: `fa-user`,
@@ -327,68 +450,7 @@ userActions.signup.onClick = () => {
   $(`#ts-signup`).off(`click`).on(`click`, userActions.signup.onSubmit)
 }
 
-const addUserActions = (actions) => {
-  let html = ``;
-
-  for(const {className, icon, heading, onClick} of actions) {
-    html = `${html}
-      <div class="icon ${className}" ${onClick ? `role="button" data-toggle="modal" data-target="#ts-modal"` : ``}>
-        <i class="fa ${icon}"></i>
-        <h6>${heading}</h6>
-      </div>`;
-    if(onClick) {
-      $(`.ts-user-actions`).on(`click`, `.${className}`, onClick);
-    }
-  }
-
-  $(`.ts-user-actions`).append(html);
-}
-
-const clearUserActions = () => {
-  $(`.ts-user-actions`).html(``);
-}
-
-// Model
-const universalModal = `
-    <div class="modal fade" id="ts-modal" tabindex="-1" role="dialog" aria-labelledby="modal-header" aria-hidden="true">
-      <div class="modal-dialog" role="document">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title" id="model-header"></h5>
-            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-              <span aria-hidden="true">&times;</span>
-            </button>
-          </div>
-          <div class="modal-body"></div>
-          <div class="modal-footer"></div>
-        </div>
-      </div>
-    </div>`;
-
-const populateModal = (header, body, footer) => {
-  $(`#ts-modal .modal-title`).html(header);
-  const modalValidation = `<div class="form-feedback alert alert-dismissible" style="display: none;"></div>`;
-  $(`#ts-modal .modal-body`).html(modalValidation + body);
-  $(`#ts-modal .modal-footer`).html(footer);
-}
-
-const addModalInputValidation = ($selector, validationText, validationStyle = `danger`) => {
-  $selector.parent().addClass(`has-${validationStyle}`);
-  $selector.addClass(`form-control-${validationStyle}`)
-  $selector.next().html(validationText);
-}
-
-const addModalValidation = (validationText, validationStyle = `danger`) => {
-  $(`.form-feedback`).addClass(`alert-${validationStyle}`).html(validationText).show();
-}
-
-const clearAllModalValidation = () => {
-  $(`.form-group`).removeClass(`has-danger has-success has-warning`);
-  $(`.form-control-feedback`).html(``);
-
-  $(`.form-feedback`).hide();
-}
-
+// Handles the click event, show/hide
 $(`.icon-nav`).on(`click`, `div.ts-open-actions`, () => {
   $(`.ts-user-actions`).toggleClass(`open`)
 });
