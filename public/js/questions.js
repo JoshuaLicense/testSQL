@@ -95,7 +95,7 @@ class Question {
 
     this.save(questionObject);
 
-    const { theme, question } = questionObj;
+    const { theme, question } = questionObject;
 
     return { number, theme, question, completed : false }
   }

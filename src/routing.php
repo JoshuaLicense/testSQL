@@ -54,10 +54,4 @@ if($action === 'load') {
   $testSQL->loadDatabase((int) $db_id);
 }
 
-
-/*
-$file = file_get_contents('php://input');
-$testSQL->saveDatabase(1, $file);
-*/
-
 ?>

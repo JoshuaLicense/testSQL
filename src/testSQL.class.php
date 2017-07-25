@@ -12,7 +12,6 @@ error_reporting(E_ALL);
  *
  * PHP version 7
  *
- *
  * @author   Joshua License <Joshua.License@gmail.com>
  * @license  https://opensource.org/licenses/MIT
  * @link     https://github.com/JoshuaLicense/testSQL
@@ -122,7 +121,7 @@ class testSQL
   /**
    * Load a database file from the database
    *
-   * @param string    $db_id     the path to the database
+   * @param int    $db_id     the path to the database
    *
    * @return string   return the raw database to the client
    */
@@ -306,7 +305,7 @@ class testSQL
    *
    * @return bool
    */
-  public function isLoggedIn() {
+  public function isLoggedIn() : bool {
     return !($this->getJWT() === false);
   }
 
@@ -315,7 +314,6 @@ class testSQL
    *
    * @param string    $response    the response from the calling function, describing the http code
    * @param int       $code        http code
-   *
    */
   public static function response(string $response, int $code) : string {
     http_response_code($code);

@@ -42,7 +42,7 @@ class testSQL {
   static loadDefault(resolve, reject) {
     let xhr = new XMLHttpRequest();
 
-    xhr.open(`GET`, `../src/routing.php?action=loadDefault`);
+    xhr.open(`GET`, `../resources/default.database.sqlite`);
     xhr.responseType = `arraybuffer`;
 
     xhr.onload = function(e) {
@@ -188,7 +188,7 @@ let ts;
 
 let testSQLPromise = testSQL.load().then((response) => {
   // load after the database
-  ts = new testSQL({ buffer: response });
+  ts = new testSQL(response);
 
   ts.displaySchema();
 }, (error) => {
@@ -200,22 +200,28 @@ let testSQLPromise = testSQL.load().then((response) => {
  * @param {array} result  - the result of the query
  */
 const showOutput = (result) => {
-  let html;
+  let html = ``;
+  const maximumRowsToDisplay = 5;
 
   if(result.length > 0) {
-    html = `<div class="mb-2">Number of returned records: ${result[0].values.length}</div>`;
     html = html + `<div class="table-responsive">`;
-    html = html + `<table class="table table-striped table-sm table-bordered">`;
-
+    html = html + `<table class="table table-hover">
+      <thead class="thead-inverse">`;
     result[0].columns.forEach((el) => html = html + `<th>${el}</th>`);
+    html = html + `</thead>`;
 
-    result[0].values.forEach((el) => {
+    result[0].values.slice(0, maximumRowsToDisplay).forEach((el) => {
       html = html + `<tr>`;
       el.forEach((el) => html = html + `<td>${el}</td>`);
       html = html + `</tr>`;
     });
-    html = html + `</div>`;
+
+    if(result[0].values.length > maximumRowsToDisplay) {
+      html = html + `<tr> <td class="text-muted small" colspan="${result[0].columns.length}"> and ${(result[0].values.length - maximumRowsToDisplay)} more results </td> </tr>`;
+    }
+
     html = html + `</table>`;
+    html = html + `</div>`;
   } else {
       showResponse(`${ts.db.getRowsModified()} rows affected`, `success`);
   }

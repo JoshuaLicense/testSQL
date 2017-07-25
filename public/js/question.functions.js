@@ -13,7 +13,7 @@ const QuestionError = function (message) {
  * @return {string} returns the empasized string
  */
 const empasize = (input) => {
-  return `<em>${string}</em>`;
+  return `<em>${input}</em>`;
 }
 
 // Dynamic question helper functions
@@ -202,7 +202,7 @@ const basicSelect = () => {
 
 const specificSelect = () => {
   const [ { tbl : [tbl_name ], col : [, col_name] } ] = getSpecificColumns(1);
-  console.log(tbl_name)
+
   const question = `Select only the ${empasize(col_name)} rows in the table ${empasize(tbl_name)}`;
   const answer = `SELECT "${col_name}" FROM "${tbl_name}"`;
 
