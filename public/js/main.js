@@ -45,7 +45,7 @@ class testSQL {
     xhr.open(`GET`, `../resources/default.database.sqlite`);
     xhr.responseType = `arraybuffer`;
 
-    xhr.onload = function(e) {
+    xhr.onload = () => {
       if (xhr.status === 200) {
         resolve(new Uint8Array(xhr.response));
       } else {
@@ -100,7 +100,7 @@ class testSQL {
    *
    * @return {object}               - returns a promise object
    */
-  loadUint8Array(uint8, resolve, reject) {
+  static loadUint8Array(uint8, resolve, reject) {
     // save the old database if the imported file is corrupt
     const _ts = ts;
 
@@ -110,8 +110,6 @@ class testSQL {
     try {
       ts.displaySchema();
       ts.save();
-
-      clearAllLocalStorage();
 
       resolve();
     } catch(e) {
@@ -132,10 +130,27 @@ class testSQL {
       let fileReader = new FileReader();
       fileReader.onload = () => {
         const uint8 = new Uint8Array(fileReader.result);
-        this.loadUint8Array(uint8, resolve, reject);
+        testSQL.loadUint8Array(uint8, resolve, reject);
       }
       fileReader.readAsArrayBuffer(file);
     });
+  }
+
+  /**
+   * Downloads the current database
+   */
+  download() {
+    const blob = new Blob([ts.db.export()], {type: `application/x-sqlite-3`});
+
+    var a = document.createElement("a");
+    a.href = window.URL.createObjectURL(blob);
+    a.download = 'sql.db';
+    a.onclick = () => {
+      setTimeout(() => {
+        window.URL.revokeObjectURL(a.href);
+      }, 1500);
+    }
+    a.click();
   }
 
   /**
@@ -289,15 +304,31 @@ $(document).ready(function() {
     input.setValue(``);
   });
 
+  /* Download */
+  $(`.ts-download`).on(`click`, () => {
+    ts.download();
+  });
+
   /* Restore icon */
   $(`.ts-restore-icon`).on(`click`, () => {
     testSQL.load().then((response) => {
-      clearAllLocalStorage();
+      // save the old database if the imported file is corrupt
+      const _ts = ts;
 
-      // load after the database
-      ts = new testSQL({ buffer: response });
+      ts = new testSQL(response);
 
-      ts.displaySchema();
+      // the scheme will fail to load if the file is not a VALID database
+      try {
+        ts.displaySchema();
+        ts.save();
+
+        alert(`Database restored successfully!`);
+      } catch(e) {
+        // revert all changes
+        ts = _ts;
+
+        alert(`Unable to restore database!`);
+      }
     });
   });
 

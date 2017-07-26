@@ -30,7 +30,7 @@ class Identity {
       this.id = JWT.user_id;
       this.username = JWT.username;
 
-      addUserActions([ userActions.manageDatabase, userActions.manageSession, ]);
+      addUserActions([ userActions.manageDatabase, userActions.manageSession, userActions.logout, ]);
     } else {
       // Not logged in
       addUserActions([ userActions.login, userActions.signup, ]);
@@ -157,21 +157,23 @@ class Identity {
    * @return {object} - returns a promise object
    */
   save() {
-    const xhr = new XMLHttpRequest();
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
 
-    xhr.open(`POST`, `../src/routing.php?action=save`);
+      xhr.open(`POST`, `../src/routing.php?action=saveDatabase`);
 
-    xhr.onload = function(e) {
-      if(this.status === 200) {
-        alert('SAVED');
-        resolve();
+      xhr.onload = function(e) {
+        if(this.status === 200) {
+          alert('SAVED');
+          resolve();
+        }
+
+        reject(Error(this.response));
       }
 
-      reject(Error(this.response));
-    }
-
-    const blob = new Blob([ts.db.export()], {type: `application/x-sqlite-3`});
-    xhr.send(blob);
+      const blob = new Blob([ts.db.export()], {type: `application/x-sqlite-3`});
+      xhr.send(blob);
+    });
   }
 
   /**
@@ -181,21 +183,48 @@ class Identity {
    * @return {object} - returns a promise object
    */
   load(id) {
-    const xhr = new XMLHttpRequest();
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
 
-    xhr.open(`POST`, `../src/routing.php?action=load&id=${id}`);
-    xhr.responseType = `arraybuffer`;
+      xhr.open(`POST`, `../src/routing.php?action=loadDatabase&id=${id}`);
+      xhr.responseType = `arraybuffer`;
 
-    xhr.onload = function(e) {
-      if(this.status === 200) {
-        resolve(new Uint8Array(this.response));
+      xhr.onload = () => {
+        if(xhr.status === 200) {
+          testSQL.loadUint8Array(new Uint8Array(xhr.response), resolve, reject);
+          resolve();
+        }
+
+        reject(Error(xhr.reponse));
       }
 
-      reject(Error(this.reponse));
-    }
-
-    xhr.send();
+      xhr.send();
+    });
   }
+
+  /**
+   * List all databases currently saved
+   *
+   * @return {array} - returns an array of the databases associated with the user
+   */
+   getSavedDatabases() {
+     return new Promise((resolve, reject) => {
+       const xhr = new XMLHttpRequest();
+
+       xhr.open(`POST`, `../src/routing.php?action=getAllDatabases`);
+       xhr.responseType = `json`;
+
+       xhr.onload = () => {
+         if(xhr.status === 200) {
+           resolve(xhr.response);
+         }
+
+         reject(Error(xhr.reponse));
+       }
+
+       xhr.send();
+     });
+   }
 }
 
 /**
@@ -244,6 +273,7 @@ const clearUserActions = () => {
  */
 const populateModal = (header, body, footer) => {
   $(`#ts-modal .modal-title`).html(header);
+
   const modalValidation = `<div class="form-feedback alert alert-dismissible" style="display: none;"></div>`;
   $(`#ts-modal .modal-body`).html(modalValidation + body);
   $(`#ts-modal .modal-footer`).html(footer);
@@ -292,6 +322,8 @@ const userActions = {
   },
   logout : {
     className: `ts-logout-icon`,
+    icon: `fa-sign-out`,
+    heading: `Logout`,
   },
   signup : {
     className: `ts-signup-icon`,
@@ -339,10 +371,7 @@ userActions.login.onSubmit = () => {
 
       clearUserActions();
 
-      addUserActions([
-        userActions.manageDatabase,
-        userActions.manageSession,
-      ]);
+      addUserActions([ userActions.manageDatabase, userActions.manageSession, userActions.logout, ]);
     });
   }
 }
@@ -409,10 +438,7 @@ userActions.signup.onSubmit = () => {
 
       clearUserActions();
 
-      addUserActions([
-        userActions.manageDatabase,
-        userActions.manageSession,
-      ]);
+      addUserActions([ userActions.manageDatabase, userActions.manageSession, userActions.logout, ]);
     });
   }
 }
@@ -448,6 +474,57 @@ userActions.signup.onClick = () => {
   populateModal(header, body, footer);
 
   $(`#ts-signup`).off(`click`).on(`click`, userActions.signup.onSubmit)
+}
+
+userActions.manageDatabase.onClick = () => {
+  const header = `Manage Databases`;
+  let body = `No stored databases found`;
+  identity.getSavedDatabases().then((response) => {
+    body = `
+      <table class="table table-hover">
+        <thead class="thead-inverse">
+          <tr>
+            <th> # </th>
+            <th> Created </th>
+            <th> Actions </th>
+          </tr>
+        </thead>`;
+    response.forEach((val) => {
+      let createdDate = new Date(val.Created).toLocaleString(`en-GB`);
+      body = body + `
+        <tr>
+          <th scope="row">${val.ID}</th>
+          <td>${createdDate}</td>
+          <td class="text-right">
+            <span class="ts-load px-1" data-id="${val.ID}" role="button" title="Load database"><i class="fa fa-download"></i></span>
+            <span class="ts-remove px-1" data-id="${val.ID}" role="button" title="Remove database" onclick="return confirm('Are you sure you want to PERMANENTLY remove this database?');"><i class="fa fa-trash-o"></i></span>
+          </td>
+        </tr>`;
+    });
+    body = body + `</table>`;
+
+    $(`#ts-modal .modal-body`).html(body);
+
+    $(`.ts-load`).off(`click`).on(`click`, function() {
+      if(!confirm('Loading a database will REPLACE your current database, are you sure you want to continue?')) return false;
+
+      const db_id = $(this).data(`id`);
+
+      identity.load(db_id).then((response) => {
+
+      });
+    });
+  });
+
+  const footer = `<button type="button" class="btn btn-primary" id="ts-save">Save current database</button>`;
+
+  populateModal(header, body, footer);
+
+  $(`#ts-save`).off(`click`).on(`click`, () => {
+    identity.save().then((response) => {
+      console.log(response);
+    });
+  });
 }
 
 // Handles the click event, show/hide
