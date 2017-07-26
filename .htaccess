@@ -1,9 +1,1 @@
-DirectoryIndex /public/index.html
-
-# Prevent directory listings
-Options All -Indexes -Multiviews
-
-<FilesMatch "\.(htaccess|ini|log)$">
-Order Allow,Deny
-Deny from all
-</FilesMatch>
+DirectoryIndex public/index.php public/index.html

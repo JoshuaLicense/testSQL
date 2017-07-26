@@ -124,10 +124,7 @@ main {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.thead-inverse th {
-  background-color: #333;
+  max-width: 20rem;
 }
 
 /*
@@ -313,7 +310,7 @@ main {
   }
 
   .ts-user-actions {
-    left: -200%;
+    left: -100%;
     top: 0;
     bottom: 0;
 
@@ -398,7 +395,7 @@ main {
 
   .ts-user-actions {
     position: absolute;
-    bottom: -200%;
+    bottom: -100%;
 
     flex-direction: column-reverse;
 

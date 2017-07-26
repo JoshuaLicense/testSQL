@@ -292,7 +292,7 @@ class Question {
      * @return {string} returns the normalized string
      */
     const normalize = (input) => {
-      return input.replace(/[^A-Z()*]+/gi, '');
+      return colName.replace(/[^A-Z()*]+/gi, '');
     }
 
     // Step 3:  Check each row individually for simularity
