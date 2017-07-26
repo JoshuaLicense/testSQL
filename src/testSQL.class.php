@@ -79,6 +79,27 @@ class testSQL
   }
 
   /**
+   * Get all the saved databases associated with the user
+   *
+   * @return {json} - list of database information associated to the user
+   */
+  public function getAllDatabases() {
+    if(!$this->isActiveFeature('login')) {
+      self::response('The login feature is not active!', self::$http_codes['FORBIDDEN']);
+    }
+
+    if(!$token = $this->getJWT()) {
+      self::response('You need to be logged in to access this feature!', self::$http_codes['UNAUTHORIZED']);
+    }
+
+    $stmt = $this->db->prepare('SELECT `ID`, `Created` FROM `Stored_Database` WHERE `User_ID` = :user_id');
+    $stmt->execute(array(':user_id' => $token['user_id']));
+    $databases = $stmt->fetchAll();
+
+    self::response(json_encode($databases), self::$http_codes['OK']);
+  }
+
+  /**
    * Save a database file to the database
    *
    * @param string    $db_path     the path to the database
@@ -86,11 +107,11 @@ class testSQL
    */
   public function saveDatabase(string $db_path = 'php://input') {
     if(!$this->isActiveFeature('login')) {
-      self::response('The login feature is not active!', static::$http_codes['FORBIDDEN']);
+      self::response('The login feature is not active!', self::$http_codes['FORBIDDEN']);
     }
 
     if(!$token = $this->getJWT()) {
-      self::response('You need to be logged in to access this feature', self::$http_codes['UNAUTHORIZED']);
+      self::response('You need to be logged in to access this feature!', self::$http_codes['UNAUTHORIZED']);
     }
 
     // if the file is a stream, file_exists doesn't work
@@ -98,51 +119,79 @@ class testSQL
     $db_file = @file_get_contents($db_path);
 
     if($db_file === false) {
-      self::response('Cannot find file!', static::$http_codes['BAD_REQUEST']);
+      self::response('Cannot find file!', self::$http_codes['BAD_REQUEST']);
     }
 
-    $stmt = $this->db->prepare('SELECT COUNT(`ID`) as count FROM `Stored_Database` WHERE `User_ID` >= :user_id');
+    $stmt = $this->db->prepare('SELECT COUNT(`ID`) as count FROM `Stored_Database` WHERE `User_ID` = :user_id');
     $stmt->execute(array(':user_id' => $token['user_id']));
     $database = $stmt->fetch();
 
     if($database['count'] >= $this->settings['defines']['stored_database_limit']) {
-      self::response('You have reached the limit for the amount of stored databases!', static::$http_codes['FORBIDDEN']);
+      self::response('You have reached the limit for the amount of stored databases!', self::$http_codes['FORBIDDEN']);
     }
 
     $stmt = $this->db->prepare('INSERT INTO `Stored_Database` (`User_ID`, `File`) VALUES (:user_id, :file)');
     $stmt->execute(array(':user_id' => $token['user_id'], ':file' => $db_file));
 
     if($stmt->rowCount() === 1) {
-      self::response('Database saved to the database', static::$http_codes['OK']);
+      self::response('Database saved to the database', self::$http_codes['OK']);
     }
-    self::response('Database couldn\'t be saved', static::$http_codes['SERVER_ERROR']);
+    self::response('Database couldn\'t be saved', self::$http_codes['SERVER_ERROR']);
   }
 
   /**
    * Load a database file from the database
    *
-   * @param int    $db_id     the path to the database
+   * @param int    $db_id     the id of the database
    *
    * @return string   return the raw database to the client
    */
   public function loadDatabase(int $db_id) {
     if(!$this->isActiveFeature('login')) {
-      self::response('The login feature is not active!', static::$http_codes['FORBIDDEN']);
+      self::response('The login feature is not active!', self::$http_codes['FORBIDDEN']);
     }
 
     if(!$token = $this->getJWT()) {
-      self::response('You need to be logged in to access this feature', self::$http_codes['UNAUTHORIZED']);
+      self::response('You need to be logged in to access this feature!', self::$http_codes['UNAUTHORIZED']);
     }
 
-    $stmt = $this->db->prepare('SELECT `File` FROM `Stored_Database` WHERE `ID` = :db_id && `User_ID` >= :user_id');
+    $stmt = $this->db->prepare('SELECT `File` FROM `Stored_Database` WHERE `ID` = :db_id && `User_ID` = :user_id');
     $stmt->execute(array(':db_id' => $db_id,':user_id' => $token['user_id']));
     $database = $stmt->fetch();
 
-    header('Content-Type: image/png');
-    header('Content-Length: ' . strlen($database['File']));
-    echo $database['File'];
+    if($database) {
+      header('Content-Type: image/png');
+      header('Content-Length: ' . strlen($database['File']));
 
-    self::response($database['File'], static::$http_codes['OK']);
+      self::response($database['File'], self::$http_codes['OK']);
+    }
+    self::response('Database not found!', self::$http_codes['NOT FOUND']);
+  }
+
+  /**
+   * Delete a database file from the database
+   *
+   * @param int    $db_id     the id of the database
+   */
+  public function deleteDatabase(int $db_id) {
+    if(!$this->isActiveFeature('login')) {
+      self::response('The login feature is not active!', self::$http_codes['FORBIDDEN']);
+    }
+
+    if(!$token = $this->getJWT()) {
+      self::response('You need to be logged in to access this feature!', self::$http_codes['UNAUTHORIZED']);
+    }
+
+    $stmt = $this->db->prepare('SELECT `ID` FROM `Stored_Database` WHERE `ID` = :db_id && `User_ID` >= :user_id');
+    $stmt->execute(array(':db_id' => $db_id,':user_id' => $token['user_id']));
+    $database = $stmt->fetch();
+
+    if($database) {
+      $this->db->exec('DELETE FROM `Stored_Database` WHERE `ID` = ' . $database['ID']);
+
+      self::response('Database successfully deleted', self::$http_codes['OK']);
+    }
+    self::response('Database not found!', self::$http_codes['NOT FOUND']);
   }
 
   /**
@@ -155,11 +204,11 @@ class testSQL
    */
   public function login(string $username, string $password) {
     if(!$this->isActiveFeature('login')) {
-      self::response('The login feature is not active!', static::$http_codes['FORBIDDEN']);
+      self::response('The login feature is not active!', self::$http_codes['FORBIDDEN']);
     }
 
     if($this->isLoggedIn()) {
-      self::response('Already logged in!', static::$http_codes['OK']);
+      self::response('Already logged in!', self::$http_codes['OK']);
     }
 
     $stmt = $this->db->prepare('SELECT `ID`, `Username`, `Password` FROM `User` WHERE `Username` = :username');
@@ -181,12 +230,12 @@ class testSQL
         );
 
         if($this->setJWT($token, $key)) {
-          static::response('Logged in successfully', static::$http_codes['OK']);
+          self::response('Logged in successfully', self::$http_codes['OK']);
         }
-        static::response('Problem setting JWT cookie', static::$http_codes['SERVER_ERROR']);
+        self::response('Problem setting JWT cookie', self::$http_codes['SERVER_ERROR']);
       }
     }
-    static::response('Username or password is incorrect', static::$http_codes['UNAUTHORIZED']);
+    self::response('Username or password is incorrect', self::$http_codes['UNAUTHORIZED']);
   }
 
   /**
@@ -204,7 +253,7 @@ class testSQL
     }
 
     if($this->isLoggedIn()) {
-      self::response('Already logged in!', static::$http_codes['UNAUTHORIZED']);
+      self::response('Already logged in!', self::$http_codes['UNAUTHORIZED']);
     }
 
     $stmt = $db->prepare('SELECT `Email` FROM `User` WHERE `Username` = :username OR `Email` = :email');
@@ -233,10 +282,10 @@ class testSQL
       );
 
       if($this->setJWT($token, $key)) {
-        static::response('Signed up successfully', static::$http_codes['OK']);
+        self::response('Signed up successfully', self::$http_codes['OK']);
       }
     }
-    static::response('Failed to create user', static::$http_codes['SERVER_ERROR']);
+    self::response('Failed to create user', self::$http_codes['SERVER_ERROR']);
   }
 
   /**
@@ -247,6 +296,61 @@ class testSQL
       unset($_COOKIE['UserJWT']);
       setcookie('UserJWT', '', time() - 3600);
     }
+  }
+
+  /**
+   * Queries the database to return information regarding the current session
+   *
+   * @param integer   $user_id   the user's primary key (ID)
+   *
+   * @return array    session data, blank array is returned if not found
+   */
+  public function getUserSession(int $user_id) : array {
+    $sql = 'SELECT
+              (SELECT `Username` FROM `User` WHERE `ID` = s.`OwnerUserID`) as "SessionOwner",
+              us.`DateJoined`,
+              s.`CreatedAt`,
+              s.`DefaultDatabaseName`
+            FROM `UserSession` us
+            INNER JOIN `Session` s ON(us.`SessionID` = s.`ID`)
+            WHERE
+              us.`UserID` = "' . $user_id . '"
+              AND us.`DateLeft` IS NULL';
+
+    $stmt = $this->db->query($sql);
+    $session = $stmt->fetch();
+
+    return $session;
+  }
+
+  /**
+   * Outputs a file, with the specified encoding
+   *
+   * @param string    $file_name   the path where the file exists
+   * @param string    $encoding   the expected content type of the file
+   *
+   * @return string   returns the content of the file
+   */
+  public static function outputFile(string $file_name, string $encoding = 'text/html'): string {
+    header('Content-Type: ' . $encoding);
+    header('Content-Length: ' . filesize($file_name));
+    readfile($file_name);
+  }
+
+  /**
+   * Copies a file from one place to another
+   *
+   * @param string    $from_file   the path where the file exists
+   * @param string    $to_file     the path where you want to copy the file too
+   *
+   * @return boolean  true if the file was saved, false if not
+   */
+  public static function copyFile(string $from_file, string $to_file): bool {
+    $sqlite_file = self::getFile($from_file);
+    if($sqlite_file !== false) {
+        return (file_put_contents($to_file, $sqliteFile) !== false);
+    }
+    return false;
   }
 
   /**
@@ -264,7 +368,7 @@ class testSQL
       $jwt = JWT::encode($token, $key);
     }
     catch (Exception $e) {
-      static::response('Error constructing the JSON web token!', static::$http_codes['SERVER_ERROR']);
+      self::response('Error constructing the JSON web token!', self::$http_codes['SERVER_ERROR']);
     }
 
     return setcookie('UserJWT', $jwt, strtotime('+1 day'), '/');
