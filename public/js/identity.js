@@ -69,25 +69,12 @@ class Identity {
       const xhr = new XMLHttpRequest();
       xhr.open(`POST`, `../src/routing.php?action=login&username=${username}&password=${password}`);
 
-      xhr.onload = function(e) {
-        if(this.status === 200) {
-          resolve();
+      xhr.onload = () => {
+        if(xhr.status === 200) {
+          return resolve();
         }
 
-        if(this.status === 400) {
-          addModalValidation(`One or more fields are not valid!`);
-          reject();
-        }
-
-        if(this.status === 401) {
-          addModalValidation(`Incorrect username or password!`);
-          reject();
-        }
-
-        if(this.status === 500) {
-          addModalValidation(this.response);
-          reject();
-        }
+        return reject(Error(xhr.response));
       };
 
       xhr.send();
@@ -108,44 +95,40 @@ class Identity {
 
       xhr.open(`GET`, `signup.php?email=${email}&username=${username}&password=${password}`)
 
-      xhr.onload = function(e) {
-        if(this.status === 200) {
-          const uint8 = new Uint8Array(this.response);
+      xhr.onload = () => {
+        if(xhr.status === 200) {
+          const uint8 = new Uint8Array(xhr.response);
           testSQL.loadUint8Array(uint8, resolve, reject);
 
-          resolve();
+          return resolve();
         }
 
-        const $email = $(`#ts-email`);
-        const $username = $(`#ts-username`);
-        const $password = $(`#ts-password`);
-
-        if(this.status === 400) {
-          addModalValidation(`One or more fields are not populated!`);
-          reject();
-        }
-
-        if(this.status === 401) {
-          // validation failed server side
-          addModalValidation(`One or more fields are not valid!`);
-          reject();
-        }
-
-        if(this.status === 409) {
-          if(this.response == 'username-taken') {
-            addModalInputValidation($username, `Username already in-use!`);
-          }
-          if(this.response == 'email-taken') {
-            addModalInputValidation($email, `Email already in-use!`);
-          }
-          reject();
-        }
-
-        if(this.status === 500) {
-          addModalValidation(this.response);
-          reject();
-        }
+        return reject(Error(xhr.response));
       };
+
+      xhr.send();
+    });
+  }
+
+  /**
+   * List all databases currently saved
+   *
+   * @return {array} - returns an array of the databases associated with the user
+   */
+  getSavedDatabases() {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      xhr.open(`POST`, `../src/routing.php?action=getAllDatabases`);
+      xhr.responseType = `json`;
+
+      xhr.onload = () => {
+        if(xhr.status === 200) {
+          return resolve(xhr.response);
+        }
+
+        return reject(Error(xhr.reponse));
+      }
 
       xhr.send();
     });
@@ -162,13 +145,12 @@ class Identity {
 
       xhr.open(`POST`, `../src/routing.php?action=saveDatabase`);
 
-      xhr.onload = function(e) {
-        if(this.status === 200) {
-          alert('SAVED');
-          resolve();
+      xhr.onload = () => {
+        if(xhr.status === 200) {
+          return resolve(xhr.response);
         }
 
-        reject(Error(this.response));
+        return reject(Error(xhr.response));
       }
 
       const blob = new Blob([ts.db.export()], {type: `application/x-sqlite-3`});
@@ -191,11 +173,10 @@ class Identity {
 
       xhr.onload = () => {
         if(xhr.status === 200) {
-          testSQL.loadUint8Array(new Uint8Array(xhr.response), resolve, reject);
-          resolve();
+          return testSQL.loadUint8Array(new Uint8Array(xhr.response), resolve, reject);
         }
 
-        reject(Error(xhr.reponse));
+        return reject(Error(`Problem loading database!`));
       }
 
       xhr.send();
@@ -203,28 +184,29 @@ class Identity {
   }
 
   /**
-   * List all databases currently saved
+   * Remove a database
+   * @param {integer} id    - the primary key (id) of the database
    *
-   * @return {array} - returns an array of the databases associated with the user
+   * @return {object} - returns a promise object
    */
-   getSavedDatabases() {
-     return new Promise((resolve, reject) => {
-       const xhr = new XMLHttpRequest();
+  delete(id) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
 
-       xhr.open(`POST`, `../src/routing.php?action=getAllDatabases`);
-       xhr.responseType = `json`;
+      xhr.open(`POST`, `../src/routing.php?action=deleteDatabase&id=${id}`);
 
-       xhr.onload = () => {
-         if(xhr.status === 200) {
-           resolve(xhr.response);
-         }
+      xhr.onload = () => {
+        if(xhr.status === 200) {
+          return resolve(xhr.response);
+        }
 
-         reject(Error(xhr.reponse));
-       }
+        return reject(Error(xhr.response));
+      }
 
-       xhr.send();
-     });
-   }
+      xhr.send();
+    });
+  }
+
 }
 
 /**
@@ -274,7 +256,7 @@ const clearUserActions = () => {
 const populateModal = (header, body, footer) => {
   $(`#ts-modal .modal-title`).html(header);
 
-  const modalValidation = `<div class="form-feedback alert alert-dismissible" style="display: none;"></div>`;
+  const modalValidation = `<div class="form-feedback alert" style="display: none;"></div>`;
   $(`#ts-modal .modal-body`).html(modalValidation + body);
   $(`#ts-modal .modal-footer`).html(footer);
 }
@@ -363,7 +345,7 @@ userActions.login.onSubmit = () => {
   }
 
   if(hasErrors === false) {
-    identity.login($username.val(), $password.val()).then((response) => {
+    identity.login($username.val(), $password.val()).then(() => {
       // remove the login icon!
       $(`#ts-modal .modal-body`).html(`<small class="text-success">Welcome back, ${$username.val()}!</small>`)
 
@@ -372,6 +354,8 @@ userActions.login.onSubmit = () => {
       clearUserActions();
 
       addUserActions([ userActions.manageDatabase, userActions.manageSession, userActions.logout, ]);
+    }).catch((Error) => {
+      addModalValidation(Error);
     });
   }
 }
@@ -478,51 +462,90 @@ userActions.signup.onClick = () => {
 
 userActions.manageDatabase.onClick = () => {
   const header = `Manage Databases`;
-  let body = `No stored databases found`;
-  identity.getSavedDatabases().then((response) => {
-    body = `
-      <table class="table table-hover">
-        <thead class="thead-inverse">
-          <tr>
-            <th> # </th>
-            <th> Created </th>
-            <th> Actions </th>
-          </tr>
-        </thead>`;
-    response.forEach((val) => {
-      let createdDate = new Date(val.Created).toLocaleString(`en-GB`);
-      body = body + `
+  const body = `
+    <table class="table table-hover">
+      <thead class="thead-inverse">
         <tr>
-          <th scope="row">${val.ID}</th>
-          <td>${createdDate}</td>
-          <td class="text-right">
-            <span class="ts-load px-1" data-id="${val.ID}" role="button" title="Load database"><i class="fa fa-download"></i></span>
-            <span class="ts-remove px-1" data-id="${val.ID}" role="button" title="Remove database" onclick="return confirm('Are you sure you want to PERMANENTLY remove this database?');"><i class="fa fa-trash-o"></i></span>
-          </td>
-        </tr>`;
-    });
-    body = body + `</table>`;
-
-    $(`#ts-modal .modal-body`).html(body);
-
-    $(`.ts-load`).off(`click`).on(`click`, function() {
-      if(!confirm('Loading a database will REPLACE your current database, are you sure you want to continue?')) return false;
-
-      const db_id = $(this).data(`id`);
-
-      identity.load(db_id).then((response) => {
-
-      });
-    });
-  });
+          <th> # </th>
+          <th> Created </th>
+          <th> Actions </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">Loading databases</th>
+        </tr>
+      </tbody>
+    </table>`;
 
   const footer = `<button type="button" class="btn btn-primary" id="ts-save">Save current database</button>`;
 
   populateModal(header, body, footer);
 
+  /**
+   * Update the list of stored databases
+   * @param {array} list - array of stored databases
+   */
+  const updateListOfDatabases = (list) => {
+    let html = ``;
+
+    list.forEach((row) => {
+      let createdDate = new Date(row.Created).toLocaleString(`en-GB`);
+
+      html = html +
+        `<tr>
+          <th scope="row">${row.ID}</th>
+          <td>${createdDate}</td>
+          <td class="text-right">
+            <span class="ts-load px-1" data-id="${row.ID}" role="button" title="Load database"><i class="fa fa-download"></i></span>
+            <span class="ts-remove px-1" data-id="${row.ID}" role="button" title="Remove database"><i class="fa fa-trash-o"></i></span>
+          </td>
+        </tr>`;
+    });
+    html = html + `</table>`;
+
+    $(`.modal-body tbody`).html(html);
+  };
+
+  const refreshListOfDatabases = () => {
+    identity.getSavedDatabases().then((response) => {
+      updateListOfDatabases(response);
+
+      $(`.ts-load`).off(`click`).on(`click`, function() {
+        if(!confirm('Loading a database will REPLACE your current database, are you sure you want to continue?')) return false;
+
+        const db_id = $(this).data(`id`);
+
+        identity.load(db_id).then(() => {
+          addModalValidation(`Database #${db_id} loaded successfully!`, `success`);
+        }).catch((e) => {
+          addModalValidation(e);
+        });
+      });
+
+      $(`.ts-remove`).off(`click`).on(`click`, function() {
+        if(!confirm('Loading a database will REPLACE your current database, are you sure you want to continue?')) return false;
+
+        const db_id = $(this).data(`id`);
+
+        identity.delete(db_id).then((response) => {
+          addModalValidation(response, `success`);
+          refreshListOfDatabases();
+        }).catch((e) => {
+          addModalValidation(e);
+        });
+      });
+    });
+  };
+
+  refreshListOfDatabases();
+
   $(`#ts-save`).off(`click`).on(`click`, () => {
     identity.save().then((response) => {
-      console.log(response);
+      addModalValidation(response, `success`);
+      refreshListOfDatabases();
+    }).catch((e) => {
+      addModalValidation(e);
     });
   });
 }
