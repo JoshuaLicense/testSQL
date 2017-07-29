@@ -91,7 +91,6 @@ class testSQL
     if(!$token = $this->getJWT()) {
       self::response('You need to be logged in to access this feature!', self::$http_codes['UNAUTHORIZED']);
     }
-
     $stmt = $this->db->prepare('SELECT `ID`, `Created` FROM `Stored_Database` WHERE `User_ID` = :user_id');
     $stmt->execute(array(':user_id' => $token['user_id']));
     $databases = $stmt->fetchAll();
@@ -134,7 +133,7 @@ class testSQL
     $stmt->execute(array(':user_id' => $token['user_id'], ':file' => $db_file));
 
     if($stmt->rowCount() === 1) {
-      self::response('Database saved to the database', self::$http_codes['OK']);
+      self::response('Database saved to the server!', self::$http_codes['OK']);
     }
     self::response('Database couldn\'t be saved', self::$http_codes['SERVER_ERROR']);
   }
@@ -189,9 +188,9 @@ class testSQL
     if($database) {
       $this->db->exec('DELETE FROM `Stored_Database` WHERE `ID` = ' . $database['ID']);
 
-      self::response('Database successfully deleted', self::$http_codes['OK']);
+      self::response('Database #' . $db_id . ' successfully deleted!', self::$http_codes['OK']);
     }
-    self::response('Database not found!', self::$http_codes['NOT FOUND']);
+    self::response('Database not found!', self::$http_codes['NOT_FOUND']);
   }
 
   /**
@@ -261,7 +260,7 @@ class testSQL
     $existingUser = $stmt->fetch();
 
     if($existingUser) {
-      self::response($existingUser['Email'] == $email ? 'email-taken' : 'username-taken', self::$http_codes['CONFLICT']);
+      self::response(($existingUser['Email'] == $email ? 'Email' : 'Username') . ' already in use', self::$http_codes['CONFLICT']);
     }
 
     $encryptedPassword = password_hash($password, PASSWORD_DEFAULT);
@@ -294,7 +293,7 @@ class testSQL
   public function logout() {
     if($this->isLoggedIn()) {
       unset($_COOKIE['UserJWT']);
-      setcookie('UserJWT', '', time() - 3600);
+      setcookie('UserJWT', '', time() - 3600, '/');
     }
   }
 
@@ -384,7 +383,7 @@ class testSQL
 
     if($jwtCookie) {
       try {
-        return JWT::decode($jwtCookie, $this->settings['jwt']['key']);
+        return (array) JWT::decode($jwtCookie, $this->settings['jwt']['key']);
       }
       catch(Firebase\ExpiredException $e) {
         // token expired BUT it's still valid so renew it
