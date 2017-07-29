@@ -19,35 +19,36 @@ $testSQL = new testSQL($db);
 
 // User management
 if($action === 'login') {
-  $username = $_GET['username'] ?? exit(testSQL::$http_codes['BAD_REQUEST']);
-  $password = $_GET['password'] ?? exit(testSQL::$http_codes['BAD_REQUEST']);
+  $username = $_GET['username'] ?? testSQL::response('Please enter a username!', testSQL::$http_codes['BAD_REQUEST']);
+  $password = $_GET['password'] ?? testSQL::response('Please enter a password!', testSQL::$http_codes['BAD_REQUEST']);
 
   if(!preg_match('/^[A-Za-z0-9-_]{8,20}$/', $username)) {
-    exit(testSQL::$http_codes['UNAUTHORIZED']);
+    testSQL::response('Please enter a valid username!', testSQL::$http_codes['UNAUTHORIZED']);
   }
 
   if(!preg_match('/^[\w]{8,20}$/', $password)) {
-    exit(testSQL::$http_codes['UNAUTHORIZED']);
+    testSQL::response('Please enter a valid password!', testSQL::$http_codes['UNAUTHORIZED']);
   }
 
   $testSQL->login($username, $password);
 }
 
 if($action === 'signup') {
-  $email = $_GET['email'] ?? exit(testSQL::$http_codes['BAD_REQUEST']);
-  $username = $_GET['username'] ?? exit(testSQL::$http_codes['BAD_REQUEST']);
-  $password = $_GET['password'] ?? exit(testSQL::$http_codes['BAD_REQUEST']);
+  $email = $_GET['email'] ?? testSQL::response('Please enter an email!', testSQL::$http_codes['BAD_REQUEST']);
+  $username = $_GET['username'] ?? testSQL::response('Please enter a username!', testSQL::$http_codes['BAD_REQUEST']);
+  $password = $_GET['password'] ?? testSQL::response('Please enter a password!', testSQL::$http_codes['BAD_REQUEST']);
+
 
   if(!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-    exit(testSQL::$http_codes['UNAUTHORIZED']);
+    testSQL::response('Please enter a valid email!', testSQL::$http_codes['UNAUTHORIZED']);
   }
 
   if(!preg_match('/^[A-Za-z0-9-_]{8,20}$/', $username)) {
-    exit(testSQL::$http_codes['UNAUTHORIZED']);
+    testSQL::response('Please enter a valid username!', testSQL::$http_codes['UNAUTHORIZED']);
   }
 
   if(!preg_match('/^[\w]{8,20}$/', $password)) {
-    exit(testSQL::$http_codes['UNAUTHORIZED']);
+    testSQL::response('Please enter a valid password!', testSQL::$http_codes['UNAUTHORIZED']);
   }
 
   $testSQL->signup($email, $username, $password);
@@ -64,20 +65,20 @@ if($action === 'saveDatabase') {
 }
 
 if($action === 'loadDatabase') {
-  $db_id = $_GET['id'] ?? exit(testSQL::$http_codes['BAD_REQUEST']);
+  $db_id = $_GET['id'] ?? testSQL::response('Please enter a database id!', testSQL::$http_codes['BAD_REQUEST']);
 
   if(!ctype_digit($db_id)) {
-    exit(testSQL::$http_codes['UNAUTHORIZED']);
+    testSQL::response('Please enter a valid database id!', testSQL::$http_codes['BAD_REQUEST']);
   }
 
   $testSQL->loadDatabase((int) $db_id);
 }
 
 if($action === 'deleteDatabase') {
-  $db_id = $_GET['id'] ?? exit(testSQL::$http_codes['BAD_REQUEST']);
+  $db_id = $_GET['id'] ?? testSQL::response('Please enter a database id!', testSQL::$http_codes['BAD_REQUEST']);
 
   if(!ctype_digit($db_id)) {
-    exit(testSQL::$http_codes['UNAUTHORIZED']);
+    testSQL::response('Please enter a valid database id!', testSQL::$http_codes['BAD_REQUEST']);
   }
 
   $testSQL->deleteDatabase((int) $db_id);
