@@ -384,12 +384,57 @@ $(document).ready(function() {
   });
 
 
-  /* Database schema tables */
+  // Database schema tables
   $(`.ts-schema`).on(`click`, `li`, function() {
     let tableName = $(this).data(`name`);
     let sql = `SELECT * FROM \`${tableName}\``;
 
     input.setValue(sql);
     showOutput(ts.db.exec(sql));
+  });
+
+
+  // Handles the click event, show/hide
+  $(`.icon-nav`).on(`click`, `div.ts-expandable-icon`, function(e) {
+    // get the expandable area
+    const $expandable = $(this).next().children(`.ts-expandable-area`);
+
+    // close the other expandables
+    $(`.ts-expandable-area.open`).not($expandable).removeClass(`open`);
+    // open/close this one
+    $expandable.toggleClass(`open`);
+
+    if($expandable.hasClass(`open`)) {
+      // add backdrop to DOM if doesn't exist
+      let $backdrop = $(`.icon-backdrop`).length === 0
+                        ? $(`<div class="icon-backdrop fade"></div>`).appendTo(document.body)
+                        : $(`.icon-backdrop`);
+
+      console.log($backdrop);
+      // setTimeout to allow the fade transition to happen
+      setTimeout(() => $(`.icon-backdrop`).addClass(`show`));
+    } else {
+      // or remove the backdrop from the DOM
+
+      $(`.icon-backdrop`).removeClass(`show`);
+
+      // 150ms delay = css transition duration
+      setTimeout(() => $(`.icon-backdrop`).remove(), 150);
+    }
+
+    // stop bubbling, otherwise the body click is triggered
+    e.stopImmediatePropagation();
+
+    // click somewhere that's not the icon bar? Hide expandables
+    $(`body`).on(`click`, (event) => {
+      $expandable.removeClass(`open`);
+
+      // remove the backdrop!
+      $(`.icon-backdrop`).remove();
+
+      // remove the listener
+      $(`body`).off(`click`);
+    });
+
   });
 });

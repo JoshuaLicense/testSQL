@@ -21,6 +21,21 @@
     <title>Demo &#8231 testSQL</title>
   </head>
   <body>
+    <div class="modal" id="ts-modal" tabindex="-1" role="dialog" aria-labelledby="modal-header" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="model-header"></h5>
+            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body"></div>
+          <div class="modal-footer"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="container-fluid bg-faded">
       <div class="row">
         <main class="col-12 pt-2">
@@ -81,7 +96,7 @@
             <span>.</span><span>.</span><span>.</span>
           </div>
         </div>
-        <div class="sidebar-toggler inactive py-3 px-2" title="Double click to expand/collapse">
+        <div class="d-flex sidebar-toggler inactive" title="Double click to expand/collapse">
           <div class="sidebar-toggler-text"> || </div>
         </div>
         <footer class="pb-2 pr-2">

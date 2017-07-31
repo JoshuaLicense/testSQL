@@ -1,6 +1,13 @@
-/*
- * Visual candy
+/** Z-indexes
+ *
+ *  950 - Sidebar
+ *  960 - Icon Overlay
+ *  970 - Icon Sidebar
+ *  ...
+ *  990 - Bootstrap Z-Index start
  */
+
+/** Visual candy */
  ::-webkit-input-placeholder { /* Chrome/Opera/Safari */
    font-size: 80%;
  }
@@ -14,14 +21,19 @@
    font-size: 80%;
  }
 
-/** Changed in Bootstrap4 :( **/
-/** https://github.com/twbs/bootstrap/pull/21812 **/
+/** Changed in Bootstrap4 :( */
+/** https://github.com/twbs/bootstrap/pull/21812 */
 .btn {
   cursor: pointer;
 }
 
-/** Loading effect **/
-/** https://martinwolf.org/blog/2015/01/pure-css-savingloading-dots-animation **/
+/** Remove all the rounded borders */
+* {
+  border-radius: 0 !important;
+}
+
+/** Loading effect */
+/** https://martinwolf.org/blog/2015/01/pure-css-savingloading-dots-animation */
 @keyframes blink {
     0% {
       opacity: .2;
@@ -62,17 +74,14 @@
   display: none;
 }
 
-/*
- * Main content
- */
-
+/** Main content */
 main {
   background-color: white;
   padding-left: 0.5rem !important;
   padding-right: 2rem !important;
 }
 
-/** Question numbers **/
+/** Question numbers */
 .btn-dark {
   background-color: #333;
   color: white;
@@ -87,14 +96,13 @@ main {
   background-color: #1a1a1a;
 }
 
-.btn-group-sm>.btn, .btn-sm {
+.btn-group-sm > .btn, .btn-sm {
   padding: 0.5rem 0.75rem;
 }
 
-/** Question **/
+/** Question card */
 .card {
-  border-color: #404040;
-  border-radius: .125rem;
+  border-color: #333;
 }
 
 .card-header {
@@ -102,24 +110,23 @@ main {
   color: white;
 }
 
-/** User input **/
+/** User input */
 .CodeMirror {
-  border: 1px solid #404040;
-  border-radius: .125rem;
+  border: 1px solid #333;
   height: 14.7rem;
   z-index: 0;
 }
 
 .CodeMirror-gutters {
   background-color: #333;
-  border-color: #292b2c;
+  border-color: #1a1a1a;
 }
 
 .CodeMirror-linenumber {
   color: white;
 }
 
-/** Output results **/
+/** Output result */
 #ts-result td {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -130,13 +137,11 @@ main {
   background-color: #333;
 }
 
-/*
- * Sidebar
- */
+/** Sidebar */
  .sidebar-container {
    width: calc((18.75rem * 2) - 1.5rem);
    position: fixed;
-   z-index: 990;
+   z-index: 950;
    top: 0;
    bottom: 0;
    left: calc(100% - 18.75rem);
@@ -151,7 +156,7 @@ main {
    bottom: 0;
    pointer-events: all; /* but no events below this one */
 
-   padding-left: 2rem !important;
+   padding-left: 1.5rem !important;
 
    -webkit-transition: left 0.5s ease;
    transition: left 0.5s ease;
@@ -162,9 +167,11 @@ main {
 
  .sidebar h6 {
    position: relative;
-   z-index: 990;
+   z-index: 955;
    pointer-events: none;
    white-space: nowrap;
+
+   padding-left: 0.4rem;
 
    -webkit-transition: transform 0.5s ease;
    transition: transform 0.5s ease;
@@ -174,25 +181,24 @@ main {
  }
 
  .sidebar h6.vertical {
-   transform: translate(-1.2rem) rotate(90deg);
+   transform: translate(-0.7rem) rotate(90deg);
  }
 
  .sidebar-toggler {
-   background-color: #333;
+   background-color: #1a1a1a;
    width: 1.5rem;
    position: absolute;
    top: 0;
    bottom: 0;
    left: 0;
 
-   box-shadow: 0 0 4px 0 rgba(0, 0, 0, 1);
+   /* box-shadow: 0 0 4px 0 rgba(0, 0, 0, 1); */
 
    cursor: col-resize;
  }
 
  .sidebar-toggler-text {
-   position: absolute;
-   top: 40%;
+   margin: auto; /* Center the text */
    color: #ddd;
  }
 
@@ -218,6 +224,10 @@ main {
   border-bottom-left-radius: 0px !important;
 }
 
+.badge-pill {
+  border-radius: 10rem !important;
+}
+
 .sidebar footer {
   position: absolute;
   bottom: 0;
@@ -233,28 +243,44 @@ main {
   text-decoration: none;
 }
 
-.ts-user-actions-container {
+.icon-backdrop {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 960;
+  background-color: #000;
+  opacity: 0;
+
+  -webkit-transition: opacity .15s linear;
+  -o-transition: opacity .15s linear;
+  transition: opacity .15s linear;
+}
+
+.icon-backdrop.show {
+  opacity: .5;
+}
+
+.ts-expandable-icon-container {
   position: relative;
 }
 
-.ts-user-actions {
-  position: absolute;
-
-  z-index: -100;
+.ts-expandable-area {
+  position: relative;
 }
 
 .icon-nav {
   display: flex !important;
 
   position: fixed;
-  z-index: 990;
+  z-index: 970;
 }
 
 .icon {
   text-align: center;
 }
 
-/* Icon Sidebar */
 @media (min-width: 768px) {
   main {
     padding-left: 5.5rem !important; /* icons + 0.5rem */
@@ -262,11 +288,10 @@ main {
 
   .icon-nav {
     background-color: #333333;
-    /* border-right: 1px solid #eee; */
-    box-shadow: 0 0 4px 0 rgba(0, 0, 0, 1);
+    border-right: 0.25rem solid #1a1a1a;
+    /* box-shadow: 0 0 4px 0 rgba(0, 0, 0, 1); */
 
     flex-direction: column;
-    width: 5rem;
     left: 0;
     top: 0;
     bottom: 0;
@@ -278,9 +303,11 @@ main {
 
     background-color: #333333;
     color: white;
+
+    width: 4.75rem;
   }
 
-  .ts-open-actions::after {
+  .ts-expandable-icon::after {
     content: '';
     position: absolute;
     bottom: 0;
@@ -298,13 +325,14 @@ main {
     background-color: #1a1a1a;
   }
 
-  .icon h6 {
+  .icon > h6 {
     font-size: 80%;
     margin-bottom: 0;
   }
 
-  .icon i {
+  .icon > i {
     display: block;
+    margin-bottom: 0.25rem;
     font-size: 2.5rem;
   }
 
@@ -312,28 +340,41 @@ main {
     margin-top: auto;
   }
 
-  .ts-user-actions {
-    left: -200%;
+  .ts-expandable-area-container {
+    left: 100%;
     top: 0;
     bottom: 0;
+    position: absolute;
+
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .ts-expandable-area {
+    pointer-events: all;
+
+    left: -100%;
+    top: 0;
+    bottom: 0;
+
+    margin-right: 0.25rem;
 
     -webkit-transition: left 0.5s ease;
     transition: left 0.5s ease;
   }
 
-  .ts-user-actions.open {
-    left: 100%;
-    box-shadow: 0 0 5px rgba(0, 0, 0, 1);
-  }
+  .ts-expandable-area.open {
+    left: 0;
 
-  .ts-user-actions .icon {
-    width: 5rem;
+    border-right: 0.25rem solid #1a1a1a;
+
+    /* box-shadow: 0 0 3px rgba(0, 0, 0, 1); */
   }
 }
 
 @media (min-width: 992px) {
-  .icon-nav {
-    width: 6rem;
+  .icon-nav .icon {
+    width: 5.75rem;
   }
 
   .icon i {
@@ -343,15 +384,11 @@ main {
   main {
     padding-left: 6.5rem !important;
   }
-
-  .ts-user-actions .icon {
-    width: 6rem;
-  }
 }
 
 @media (max-width: 767px) {
   main {
-    padding-bottom: 2.6rem;
+    padding-bottom: 2.75rem;
   }
 
   .icon-nav {
@@ -360,8 +397,10 @@ main {
     width: 100%;
 
     flex-direction: row;
-    background-color: #eee;
-    box-shadow: 0 0 3px rgba(51, 51, 51, 1);
+    background-color: #eaeaea;
+
+    border-top: 1px solid #ccc;
+    /* box-shadow: 0 0 3px rgba(51, 51, 51, 1); */
   }
 
   .icon {
@@ -382,7 +421,7 @@ main {
     display: none;
   }
 
-  .ts-open-actions::after {
+  .ts-expandable-icon::after {
     content: '';
     position: absolute;
     bottom: 0;
@@ -396,23 +435,22 @@ main {
     border-right-color: #333;
   }
 
-  .ts-user-actions {
+  .ts-expandable-area {
     position: absolute;
-    bottom: -200%;
+    top: 100%;
 
     flex-direction: column-reverse;
-
-    -webkit-transition: bottom 0.5s ease;
-    transition: bottom 0.5s ease;
   }
 
-  .ts-user-actions.open {
+  .ts-expandable-area.open {
+    top: auto;
     bottom: 100%;
-    box-shadow: 0 0 3px rgba(51, 51, 51, 1);
+
+    /* box-shadow: 0 0 3px rgba(51, 51, 51, 1); */
   }
 }
 
-.ts-open-actions:hover i {
+.ts-expandable-icon:hover i.fa-cog {
   -webkit-animation: spin 2s infinite linear;
   animation: spin 2s infinite linear;
 }
@@ -437,7 +475,7 @@ main {
   color: #0275d8;
 }
 
-/* Modal */
+/** Modal */
 #ts-modal .modal-header {
   background-color: #333;
   color: white;

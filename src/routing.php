@@ -33,6 +33,10 @@ if($action === 'login') {
   $testSQL->login($username, $password);
 }
 
+if($action === 'logout') {
+  $testSQL->logout();
+}
+
 if($action === 'signup') {
   $email = $_GET['email'] ?? testSQL::response('Please enter an email!', testSQL::$http_codes['BAD_REQUEST']);
   $username = $_GET['username'] ?? testSQL::response('Please enter a username!', testSQL::$http_codes['BAD_REQUEST']);

@@ -9,13 +9,15 @@ class Identity {
     this.loggedIn = false;
 
     const userActionContainer = `
-    <div class="ts-user-actions-container">
-        <div class="icon ts-open-actions" role="button">
-          <i class="fa fa-cog"></i>
-          <h6>User Actions</h6>
-        </div>
-        <div class="d-flex ts-user-actions"> </div>
-      </div>`;
+    <div class="ts-expandable-icon-container">
+      <div class="icon ts-expandable-icon" role="button">
+        <i class="fa fa-cog"></i>
+        <h6>User Actions</h6>
+      </div>
+      <div class="ts-expandable-area-container">
+        <div class="d-flex ts-expandable-area ts-user-actions"></div>
+      </div>
+    </div>`;
 
     $(`.icon-nav`).prepend(userActionContainer);
 
@@ -35,25 +37,6 @@ class Identity {
       // Not logged in
       addUserActions([ userActions.login, userActions.signup, ]);
     }
-
-    // insert a blank modal into the DOM
-    const universalModal = `
-      <div class="modal fade" id="ts-modal" tabindex="-1" role="dialog" aria-labelledby="modal-header" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h5 class="modal-title" id="model-header"></h5>
-              <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
-                <span aria-hidden="true">&times;</span>
-              </button>
-            </div>
-            <div class="modal-body"></div>
-            <div class="modal-footer"></div>
-          </div>
-        </div>
-      </div>`;
-
-    $(`body`).prepend(universalModal);
   }
 
   /**
@@ -68,6 +51,28 @@ class Identity {
 
       const xhr = new XMLHttpRequest();
       xhr.open(`POST`, `../src/routing.php?action=login&username=${username}&password=${password}`);
+
+      xhr.onload = () => {
+        if(xhr.status === 200) {
+          return resolve();
+        }
+
+        return reject(Error(xhr.response));
+      };
+
+      xhr.send();
+    });
+  }
+
+  /**
+   * Logout the current user
+   * @return {object} - returns a promise object
+   */
+  logout() {
+    return new Promise((resolve, reject) => {
+
+      const xhr = new XMLHttpRequest();
+      xhr.open(`POST`, `../src/routing.php?action=logout`);
 
       xhr.onload = () => {
         if(xhr.status === 200) {
@@ -550,9 +555,39 @@ userActions.manageDatabase.onClick = () => {
   });
 }
 
-// Handles the click event, show/hide
-$(`.icon-nav`).on(`click`, `div.ts-open-actions`, () => {
-  $(`.ts-user-actions`).toggleClass(`open`)
-});
+userActions.logout.onClick = () => {
+  const header = `Logout`;
+  const body = `
+    <div class="form-group">
+      <label for="ts-username">Email</label>
+      <input type="email" class="form-control" id="ts-email" placeholder="Enter an email" required>
+      <div class="form-control-feedback"></div>
+      <small class="form-text text-muted">Your email will be used to recover your password if needed.</small>
+    </div>
+    <div class="form-group">
+      <label for="ts-username">Username</label>
+      <input type="text" class="form-control" id="ts-username" placeholder="Enter a username" pattern="[A-Za-z0-9-_]{8,20}" required>
+      <div class="form-control-feedback"></div>
+      <small class="form-text text-muted">Your username can be between 8-20 characters long, containing only letters, numbers, underscores, and dashes.</small>
+    </div>
+    <div class="form-group">
+      <label for="ts-password">Password</label>
+      <input type="password" class="form-control" id="ts-password" placeholder="Enter a password" pattern="[\\w]{8,20}" required>
+      <div class="form-control-feedback"></div>
+      <small class="form-text text-muted">Your password must be 8-20 characters long.</small>
+    </div>
+    <div class="form-group">
+      <label for="ts-password">Confirm Password</label>
+      <input type="password" class="form-control" id="ts-confirm-password" placeholder="Confirm your password" required>
+      <div class="form-control-feedback"></div>
+    </div>`;
+  const footer = `<button type="button" class="btn btn-primary" id="ts-signup">Sign up</button>`;
+
+  populateModal(header, body);
+
+  identity.logout().then((response) => {
+    alert(`abc`);
+  });
+}
 
 let identity = new Identity();
