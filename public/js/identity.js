@@ -8,18 +8,18 @@ class Identity {
   constructor() {
     this.loggedIn = false;
 
-    const userActionContainer = `
-    <div class="ts-expandable-icon-container">
-      <div class="icon ts-expandable-icon" role="button">
-        <i class="fa fa-cog"></i>
-        <h6>User Actions</h6>
-      </div>
-      <div class="ts-expandable-area-container">
-        <div class="d-flex ts-expandable-area ts-user-actions"></div>
-      </div>
-    </div>`;
-
-    $(`.icon-nav`).prepend(userActionContainer);
+    const userActionsContainer = (heading = `Guest`) => {
+      return `
+        <div class="ts-expandable-icon-container" style="order: 1;">
+          <div class="icon ts-expandable-icon ts-expandable-user-actions" role="button">
+            <i class="fa fa-user-circle"></i>
+            <h6>${heading}</h6>
+          </div>
+          <div class="ts-expandable-area-container">
+            <div class="d-flex ts-expandable-area ts-user-actions"></div>
+          </div>
+        </div>`;
+    }
 
     let encodedJWT = Cookies.get(`UserJWT`)
     if(encodedJWT) {
@@ -29,13 +29,27 @@ class Identity {
       // get the user's id and username from the JWT
       const JWT = decodeJWT(encodedJWT);
 
-      this.id = JWT.user_id;
-      this.username = JWT.username;
+      // only add it if not already in the DOM
+      ($(`.ts-user-actions`).length === 0)
+        ? $(`.icon-nav`).prepend(userActionsContainer(JWT.username))
+        : $(`.ts-expandable-user-actions h6`).html(JWT.username);
 
-      addUserActions([ userActions.manageDatabase, userActions.manageSession, userActions.logout, ]);
+      addExpandableActions(
+        `ts-user-actions`,
+        [ userActions.manageDatabase, userActions.manageSession, userActions.logout, ],
+      );
     } else {
       // Not logged in
-      addUserActions([ userActions.login, userActions.signup, ]);
+
+      // only add it if not already in the DOM
+      ($(`.ts-user-actions`).length === 0)
+        ? $(`.icon-nav`).prepend(userActionsContainer())
+        : $(`.ts-expandable-user-actions h6`).html(`Guest`);
+
+      addExpandableActions(
+        `ts-user-actions`,
+        [ userActions.login, userActions.signup, ],
+      );
     }
   }
 
@@ -225,34 +239,6 @@ const decodeJWT = (token) => {
 }
 
 /**
- * Adds action icons to the "User actions" sidebar icon
- * @param {array} actions - the array of objects containing icon information
- */
-const addUserActions = (actions) => {
-  let html = ``;
-
-  for(const {className, icon, heading, onClick} of actions) {
-    html = `${html}
-      <div class="icon ${className}" ${onClick ? `role="button" data-toggle="modal" data-target="#ts-modal"` : ``}>
-        <i class="fa ${icon}"></i>
-        <h6>${heading}</h6>
-      </div>`;
-    if(onClick) {
-      $(`.ts-user-actions`).on(`click`, `.${className}`, onClick);
-    }
-  }
-
-  $(`.ts-user-actions`).append(html);
-}
-
-/**
- * Removes all the action icon from the "User actions" sidebar icon
- */
-const clearUserActions = () => {
-  $(`.ts-user-actions`).html(``);
-}
-
-/**
  * Populate the modal before showing
  * @param {string} header   - the header text of the model
  * @param {string} body     - the html body of the model
@@ -352,13 +338,12 @@ userActions.login.onSubmit = () => {
   if(hasErrors === false) {
     identity.login($username.val(), $password.val()).then(() => {
       // remove the login icon!
-      $(`#ts-modal .modal-body`).html(`<small class="text-success">Welcome back, ${$username.val()}!</small>`)
+      $(`#ts-modal .modal-body`).html(`<small class="text-success">Welcome back, ${$username.val()}!</small>`);
+      $(`#ts-modal .modal-footer`).html(``);
 
       setTimeout(() => $(`#ts-modal`).modal(`hide`), 1000);
 
-      clearUserActions();
-
-      addUserActions([ userActions.manageDatabase, userActions.manageSession, userActions.logout, ]);
+      identity = new Identity();
     }).catch((Error) => {
       addModalValidation(Error);
     });
@@ -421,13 +406,12 @@ userActions.signup.onSubmit = () => {
 
   if(hasErrors === false) {
     identity.signup($email.val(), $username.val(), $password.val()).then((response) => {
-      $(`#ts-modal .modal-body`).html(`<small class="text-success">Welcome, ${$username.val()}!</small>`)
+      $(`#ts-modal .modal-body`).html(`<small class="text-success">Welcome, ${$username.val()}!</small>`);
+      $(`#ts-modal .modal-footer`).html(``);
 
       setTimeout(() => $(`#ts-modal`).modal(`hide`), 1000);
 
-      clearUserActions();
-
-      addUserActions([ userActions.manageDatabase, userActions.manageSession, userActions.logout, ]);
+      identity = new Identity();
     });
   }
 }
@@ -586,7 +570,8 @@ userActions.logout.onClick = () => {
   populateModal(header, body);
 
   identity.logout().then((response) => {
-    alert(`abc`);
+
+    identity = new Identity();
   });
 }
 

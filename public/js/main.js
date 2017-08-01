@@ -13,6 +13,25 @@ class testSQL {
    */
   constructor(arrayBuffer) {
     this.db = new SQL.Database(arrayBuffer);
+
+    const databaseActionsContainer = `
+      <div class="ts-expandable-icon-container" style="order: 2;">
+        <div class="icon ts-expandable-icon" role="button">
+          <i class="fa fa-database"></i>
+          <h6>Database</h6>
+        </div>
+        <div class="ts-expandable-area-container">
+          <div class="d-flex ts-expandable-area ts-database-actions"> </div>
+        </div>
+      </div>`;
+
+    // only add it if not already in the DOM, if so clear the actions to reconstruct!
+    $(`.ts-database-actions`).length === 0 && $(`.icon-nav`).prepend(databaseActionsContainer);
+
+    addExpandableActions(
+      `ts-database-actions`,
+      [ databaseActions.import, databaseActions.restore, databaseActions.download, ]
+    );
   }
 
   /**
@@ -281,6 +300,80 @@ const clearCookies = () => {
   Object.keys(Cookies.get()).forEach((cookieName) => Cookies.remove(cookieName));
 }
 
+/**
+ * Adds action icons to an expandable sidebar icon
+ * @param {string}  expandableClass  - the class to add the actions too
+ * @param {array}   actions         - the array of objects containing icon information
+ * @param {bool}    append          - should the icons be appended to the class?
+ */
+const addExpandableActions = (expandableClass, actions, append = false) => {
+  let html = ``;
+
+  for(const {className, fileUploadID, icon, heading, onClick} of actions) {
+    // don't add the icon to the DOM if it exists
+    if($(`.${className}`).length !== 0) return;
+
+    html += `
+      <div class="icon ${className}" ${onClick ? `role="button" data-toggle="modal" data-target="#ts-modal"` : ``}>`;
+
+    if(fileUploadID) {
+      html += `
+        <label for="${fileUploadID}" class="m-0">
+          <input type="file" id="ts-import" style="display:none" />`;
+    }
+
+    html += `
+        <i class="fa ${icon}"></i>
+        <h6>${heading}</h6>`;
+
+    if(fileUploadID) {
+      html += `</label>`;
+    }
+
+    html += `</div>`;
+
+    if(onClick) {
+      $(`.${expandableClass}`).on(`click`, `.${className}`, onClick);
+    }
+  }
+
+  (append === true)
+    ? $(`.${expandableClass}`).append(html)
+    : $(`.${expandableClass}`).html(html);
+}
+
+/**
+ * Removes all the actions from the specified expandable sidebar icon
+ */
+const clearExpandableActions = (className) => {
+  $(`.${className}`).html(``);
+}
+
+// Database actions object of objects
+const databaseActions = {
+  manageSaved : {
+    className: `ts-manage-database-icon`,
+    icon: `fa-user`,
+    heading: `Manage Saved`,
+  },
+  import : {
+    className: `ts-import-icon`,
+    fileUploadID: `ts-import`,
+    icon: `fa-folder`,
+    heading: `Import`,
+  },
+  restore : {
+    className: `ts-restore-icon`,
+    icon: `fa-refresh`,
+    heading: `Restore`,
+  },
+  download : {
+    className: `ts-download`,
+    icon: `fa-download`,
+    heading: `Download`,
+  },
+};
+
 /* jQuery Event Handlers */
 $(document).ready(function() {
   /* "Run SQL" button */
@@ -410,14 +503,12 @@ $(document).ready(function() {
                         ? $(`<div class="icon-backdrop fade"></div>`).appendTo(document.body)
                         : $(`.icon-backdrop`);
 
-      console.log($backdrop);
       // setTimeout to allow the fade transition to happen
       setTimeout(() => $(`.icon-backdrop`).addClass(`show`));
     } else {
       // or remove the backdrop from the DOM
 
       $(`.icon-backdrop`).removeClass(`show`);
-
       // 150ms delay = css transition duration
       setTimeout(() => $(`.icon-backdrop`).remove(), 150);
     }
@@ -429,12 +520,10 @@ $(document).ready(function() {
     $(`body`).on(`click`, (event) => {
       $expandable.removeClass(`open`);
 
-      // remove the backdrop!
       $(`.icon-backdrop`).remove();
 
       // remove the listener
       $(`body`).off(`click`);
     });
-
   });
 });

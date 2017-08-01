@@ -262,6 +262,13 @@ main {
   opacity: .5;
 }
 
+/* For the backdrop not to fade out then fade in remove the backdrop animation */
+.modal-backdrop.fade {
+  -webkit-transition: none !important;
+  -o-transition: none !important;
+  transition: none !important;
+}
+
 .ts-expandable-icon-container {
   position: relative;
 }
@@ -325,12 +332,12 @@ main {
     background-color: #1a1a1a;
   }
 
-  .icon > h6 {
+  .icon h6 {
     font-size: 80%;
     margin-bottom: 0;
   }
 
-  .icon > i {
+  .icon i {
     display: block;
     margin-bottom: 0.25rem;
     font-size: 2.5rem;
@@ -462,13 +469,8 @@ main {
           transform: rotate(360deg);
 }
 
-.ts-import-icon:hover label > .fa-folder,
-.ts-import-icon label > .fa-folder-open {
-  display: none;
-}
-
-.ts-import-icon:hover label > .fa-folder-open {
-  display: inline;
+.ts-import-icon:hover .fa-folder:before {
+  content: "\f07c";
 }
 
 .ts-help-icon:hover i {
