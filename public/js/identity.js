@@ -324,7 +324,7 @@ userActions.signup.onSubmit = () => {
   }
 
   if(hasErrors === false) {
-    identity.signup($email.val(), $username.val(), $password.val()).then((response) => {
+    identity.signup($email.val(), $username.val(), $password.val()).then(() => {
       $(`#ts-modal .modal-body`).html(`<small class="text-success">Welcome, ${$username.val()}!</small>`);
       $(`#ts-modal .modal-footer`).html(``);
 
@@ -339,7 +339,7 @@ userActions.signup.onClick = () => {
   const header = `Sign up`;
   const body = `
     <div class="form-group">
-      <label for="ts-username">Email</label>
+      <label for="ts-email">Email</label>
       <input type="email" class="form-control" id="ts-email" placeholder="Enter an email" required>
       <div class="form-control-feedback"></div>
       <small class="form-text text-muted">Your email will be used to recover your password if needed.</small>
@@ -357,7 +357,7 @@ userActions.signup.onClick = () => {
       <small class="form-text text-muted">Your password must be 8-20 characters long.</small>
     </div>
     <div class="form-group">
-      <label for="ts-password">Confirm Password</label>
+      <label for="ts-confirm-password">Confirm Password</label>
       <input type="password" class="form-control" id="ts-confirm-password" placeholder="Confirm your password" required>
       <div class="form-control-feedback"></div>
     </div>`;
@@ -453,7 +453,7 @@ userActions.manageDatabase.onClick = () => {
 }
 
 userActions.logout.onClick = () => {
-  identity.logout().then((response) => {
+  identity.logout().then(() => {
     identity = new Identity();
   });
 }
