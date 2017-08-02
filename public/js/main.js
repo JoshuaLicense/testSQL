@@ -163,7 +163,7 @@ class testSQL {
 
     var a = document.createElement("a");
     a.href = window.URL.createObjectURL(blob);
-    a.download = 'sql.db';
+    a.download = 'testSQL.sqlite';
     a.onclick = () => {
       setTimeout(() => {
         window.URL.revokeObjectURL(a.href);
@@ -289,7 +289,7 @@ const clearView = (andInput) => {
  * Clears the applications cookies and the local storage
  */
 const clearAllLocalStorage = () => {
-  localStorage.clear();
+  clearLocalStorage();
   clearCookies();
 }
 
@@ -298,6 +298,13 @@ const clearAllLocalStorage = () => {
  */
 const clearCookies = () => {
   Object.keys(Cookies.get()).forEach((cookieName) => Cookies.remove(cookieName));
+}
+
+/**
+ * Clears the local storage
+ */
+const clearLocalStorage = () => {
+  localStorage.clear();
 }
 
 /**
@@ -351,11 +358,6 @@ const clearExpandableActions = (className) => {
 
 // Database actions object of objects
 const databaseActions = {
-  manageSaved : {
-    className: `ts-manage-database-icon`,
-    icon: `fa-user`,
-    heading: `Manage Saved`,
-  },
   import : {
     className: `ts-import-icon`,
     fileUploadID: `ts-import`,
@@ -373,6 +375,42 @@ const databaseActions = {
     heading: `Download`,
   },
 };
+
+databaseActions.import.onClick = () => {
+  $(`#ts-import`).off().on(`change`, function() {
+    const file = $(this).get(0).files[0];
+
+    ts.importFile(file);
+  });
+}
+
+databaseActions.restore.onClick = () => {
+  clearLocalStorage();
+
+  testSQL.load().then((response) => {
+    // save the old database if the imported file is corrupt
+    const _ts = ts;
+
+    ts = new testSQL(response);
+
+    // the scheme will fail to load if the file is not a VALID database
+    try {
+      ts.displaySchema();
+      ts.save();
+
+      alert(`Database restored successfully!`);
+    } catch(e) {
+      // revert all changes
+      ts = _ts;
+
+      alert(`Unable to restore database!`);
+    }
+  });
+}
+
+databaseActions.download.onClick = () => {
+  ts.download();
+}
 
 /* jQuery Event Handlers */
 $(document).ready(function() {
@@ -395,41 +433,6 @@ $(document).ready(function() {
   /* "Clear" button */
   $(`.ts-clear`).click(() => {
     input.setValue(``);
-  });
-
-  /* Download */
-  $(`.ts-download`).on(`click`, () => {
-    ts.download();
-  });
-
-  /* Restore icon */
-  $(`.ts-restore-icon`).on(`click`, () => {
-    testSQL.load().then((response) => {
-      // save the old database if the imported file is corrupt
-      const _ts = ts;
-
-      ts = new testSQL(response);
-
-      // the scheme will fail to load if the file is not a VALID database
-      try {
-        ts.displaySchema();
-        ts.save();
-
-        alert(`Database restored successfully!`);
-      } catch(e) {
-        // revert all changes
-        ts = _ts;
-
-        alert(`Unable to restore database!`);
-      }
-    });
-  });
-
-  /* Import icon */
-  $(`#ts-import`).on(`change`, function() {
-    let file = $(this).get(0).files[0];
-
-    ts.importFile(file);
   });
 
   /* Help icon */

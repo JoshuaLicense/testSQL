@@ -312,8 +312,8 @@ const userActions = {
   },
   manageDatabase : {
     className: `ts-save`,
-    icon: `fa-database`,
-    heading: `Databases`,
+    icon: `fa-save`,
+    heading: `Saved Databases`,
   },
 };
 
