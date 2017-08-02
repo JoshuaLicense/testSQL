@@ -77,6 +77,7 @@
 /** Main content */
 main {
   background-color: white;
+
   padding-left: 0.5rem !important;
   padding-right: 2rem !important;
 }
@@ -308,10 +309,13 @@ main {
     padding-top: 0.5rem !important;
     padding-bottom: 0.5rem !important;
 
+    padding-left: 0.25rem !important;
+    padding-right: 0.25rem !important;
+
     background-color: #333333;
     color: white;
 
-    width: 4.75rem;
+    min-width: 4.75rem;
   }
 
   .ts-expandable-icon::after {
@@ -335,6 +339,8 @@ main {
   .icon h6 {
     font-size: 80%;
     margin-bottom: 0;
+
+    white-space: nowrap;
   }
 
   .icon i {
@@ -380,16 +386,33 @@ main {
 }
 
 @media (min-width: 992px) {
-  .icon-nav .icon {
-    width: 5.75rem;
+  main {
+    padding-left: 6.5rem !important;
+
+    padding-right: 19.25rem !important;
+  }
+
+  .sidebar {
+    left: 0 !important;
+    padding-left: 0 !important;
+
+    border-left: 0.25rem solid #1a1a1a;
+  }
+
+  .sidebar-toggler {
+    display: none !important;
+  }
+
+  .sidebar h6.vertical {
+    transform: none;
+  }
+
+  .icon {
+    min-width: 5.75rem;
   }
 
   .icon i {
     font-size: 3rem;
-  }
-
-  main {
-    padding-left: 6.5rem !important;
   }
 }
 

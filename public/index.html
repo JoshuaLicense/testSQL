@@ -36,41 +36,37 @@
       </div>
     </div>
 
-    <div class="container-fluid">
-      <div class="row">
-        <main class="col-12 pt-2">
-          <div class="row">
-            <div id="ts-responses" class="col"></div>
-          </div>
-          <div class="row mt-2">
-            <div class="col">
-              <h4>SQL Statement</h4>
-              <!-- TODO: Remove default text -->
-              <textarea id="ts-input" class="form-control">select * from customers AB</textarea>
-            </div>
-          </div>
-          <div class="row mt-1">
-            <div class="col">
-              <button type="button" class="btn btn-success btn-sm ts-run">Run SQL &raquo;</button>
-              <button type="button" class="btn btn-danger btn-sm ts-clear">Clear</button>
-            </div>
-          </div>
-          <div class="row">
-            <div class="col">
-              <h4 class="mt-3">Result</h4>
-              <div id="ts-result"><span class="text-muted">Click "Run SQL" to execute the SQL statement above.</span></div>
-            </div>
-          </div>
-        </main>
-      </div>
-    </div>
-
     <div class="icon-nav">
       <div class="icon ts-help-icon mt-auto" role="button" style="order: 3;">
         <i class="fa fa-question"></i>
         <h6>Help</h6>
       </div>
     </div>
+
+    <main class="pt-2">
+      <div class="row">
+        <div id="ts-responses" class="col"></div>
+      </div>
+      <div class="row mt-2">
+        <div class="col">
+          <h4>SQL Statement</h4>
+          <!-- TODO: Remove default text -->
+          <textarea id="ts-input" class="form-control">select * from customers AB</textarea>
+        </div>
+      </div>
+      <div class="row mt-1">
+        <div class="col">
+          <button type="button" class="btn btn-success btn-sm ts-run">Run SQL &raquo;</button>
+          <button type="button" class="btn btn-danger btn-sm ts-clear">Clear</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <h4 class="mt-3">Result</h4>
+          <div id="ts-result"><span class="text-muted">Click "Run SQL" to execute the SQL statement above.</span></div>
+        </div>
+      </div>
+    </main>
 
     <div class="sidebar-container p-0">
       <div class="sidebar p-0 pt-4">
