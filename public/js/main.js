@@ -14,19 +14,7 @@ class testSQL {
   constructor(arrayBuffer) {
     this.db = new SQL.Database(arrayBuffer);
 
-    const databaseActionsContainer = `
-      <div class="ts-expandable-icon-container" style="order: 2;">
-        <div class="icon ts-expandable-icon" role="button">
-          <i class="fa fa-database"></i>
-          <h6>Database</h6>
-        </div>
-        <div class="ts-expandable-area-container">
-          <div class="d-flex ts-expandable-area ts-database-actions"> </div>
-        </div>
-      </div>`;
-
-    // only add it if not already in the DOM, if so clear the actions to reconstruct!
-    $(`.ts-database-actions`).length === 0 && $(`.icon-nav`).prepend(databaseActionsContainer);
+    addExpandableIcon(`ts-database-actions`, `Database`, `fa-database`, 30);
 
     addExpandableActions(
       `ts-database-actions`,
@@ -230,6 +218,43 @@ let testSQLPromise = testSQL.load().then((response) => {
 });
 
 /**
+ * Make an xhr request
+ * @param {string}    action        - the routing action
+ * @param {object}    urlData       - the GET variables to add
+ * @param {string}    responseType  - the expected response
+ * @param {mixed}     postData      - (optional) the POST variable to send
+ * @param {function}  onSuccess     - (optional) custom onsuccess (200 code) function
+ *
+ * @return {object} - returns a promise object
+ */
+const xhrRequest = (action, urlData, responseType, postData, onSuccess) => {
+  return new Promise((resolve, reject) => {
+    // construct the URL
+    let routingURL = `../src/routing.php?action=${action}`;
+    if(urlData) routingURL += `&${jQuery.param(urlData)}`;
+
+    // make a request
+    const xhr = new XMLHttpRequest();
+    xhr.open(`POST`, routingURL);
+    xhr.responseType = responseType || `text`;
+
+    xhr.onload = () => {
+      if(xhr.status === 200) {
+        // run the custom onSuccess if set
+        if(onSuccess) onSuccess();
+
+        return resolve(xhr.response);
+      }
+
+      return reject(Error(xhr.response));
+    }
+
+    // send the postData if set, otherwise send nothing (null)
+    xhr.send(postData || null)
+  });
+}
+
+/**
  * Displays the result of the user input in tables
  * @param {array} result  - the result of the query
  */
@@ -308,6 +333,35 @@ const clearLocalStorage = () => {
 }
 
 /**
+ * Adds an expandable side icon
+ * @param {string}  className       - the class that will contain the actions
+ * @param {string}  heading         - the icon heading
+ * @param {string}  iconClass       - the icon class
+ * @param {int}     order           - the order of the icons, lowest first
+ *                            (10 - user, 20 - sessions, 30 - database, 40 - help)
+ */
+const addExpandableIcon = (className, heading, iconClass, order) => {
+  // only add it if it doesn't already exist
+  if($(`.${className}`).length === 0) {
+    const html =
+      `<div class="ts-expandable-icon-container" style="order: ${order};">
+        <div class="icon ts-expandable-icon ${className}-icon" role="button">
+          <i class="fa ${iconClass}"></i>
+          <h6>${heading}</h6>
+        </div>
+        <div class="ts-expandable-area-container">
+          <div class="d-flex ts-expandable-area ${className}"></div>
+        </div>
+      </div>`;
+
+    $(`.icon-nav`).prepend(html);
+  } else {
+    // just update the header if the icon exists!
+    $(`.${className}-icon h6`).html(heading);
+  }
+}
+
+/**
  * Adds action icons to an expandable sidebar icon
  * @param {string}  expandableClass  - the class to add the actions too
  * @param {array}   actions         - the array of objects containing icon information
@@ -377,6 +431,8 @@ const databaseActions = {
 };
 
 databaseActions.import.onClick = () => {
+  if(confirm(`Importing a database will remove you from a session! Are you sure you want to continue?`)) return false;
+
   $(`#ts-import`).off().on(`change`, function() {
     const file = $(this).get(0).files[0];
 

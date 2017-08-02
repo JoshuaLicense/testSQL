@@ -8,19 +8,6 @@ class Identity {
   constructor() {
     this.loggedIn = false;
 
-    const userActionsContainer = (heading = `Guest`) => {
-      return `
-        <div class="ts-expandable-icon-container" style="order: 1;">
-          <div class="icon ts-expandable-icon ts-expandable-user-actions" role="button">
-            <i class="fa fa-user-circle"></i>
-            <h6>${heading}</h6>
-          </div>
-          <div class="ts-expandable-area-container">
-            <div class="d-flex ts-expandable-area ts-user-actions"></div>
-          </div>
-        </div>`;
-    }
-
     let encodedJWT = Cookies.get(`UserJWT`)
     if(encodedJWT) {
       // Logged in
@@ -29,22 +16,16 @@ class Identity {
       // get the user's id and username from the JWT
       const JWT = decodeJWT(encodedJWT);
 
-      // only add it if not already in the DOM
-      ($(`.ts-user-actions`).length === 0)
-        ? $(`.icon-nav`).prepend(userActionsContainer(JWT.username))
-        : $(`.ts-expandable-user-actions h6`).html(JWT.username);
+      addExpandableIcon(`ts-user-actions`, JWT.username, `fa-user-circle`, 10);
 
       addExpandableActions(
         `ts-user-actions`,
-        [ userActions.manageDatabase, userActions.manageSession, userActions.logout, ],
+        [ userActions.manageDatabase, userActions.logout, ],
       );
     } else {
       // Not logged in
 
-      // only add it if not already in the DOM
-      ($(`.ts-user-actions`).length === 0)
-        ? $(`.icon-nav`).prepend(userActionsContainer())
-        : $(`.ts-expandable-user-actions h6`).html(`Guest`);
+      addExpandableIcon(`ts-user-actions`, `Guest`, `fa-user-circle`, 10);
 
       addExpandableActions(
         `ts-user-actions`,
@@ -61,21 +42,7 @@ class Identity {
    * @return {object} - returns a promise object
    */
   login(username, password) {
-    return new Promise((resolve, reject) => {
-
-      const xhr = new XMLHttpRequest();
-      xhr.open(`POST`, `../src/routing.php?action=login&username=${username}&password=${password}`);
-
-      xhr.onload = () => {
-        if(xhr.status === 200) {
-          return resolve();
-        }
-
-        return reject(Error(xhr.response));
-      };
-
-      xhr.send();
-    });
+      return xhrRequest(`login`, { username, password });
   }
 
   /**
@@ -83,21 +50,7 @@ class Identity {
    * @return {object} - returns a promise object
    */
   logout() {
-    return new Promise((resolve, reject) => {
-
-      const xhr = new XMLHttpRequest();
-      xhr.open(`POST`, `../src/routing.php?action=logout`);
-
-      xhr.onload = () => {
-        if(xhr.status === 200) {
-          return resolve();
-        }
-
-        return reject(Error(xhr.response));
-      };
-
-      xhr.send();
-    });
+    return xhrRequest(`logout`);
   }
 
   /**
@@ -109,24 +62,10 @@ class Identity {
    * @return {object} - returns a promise object
    */
   signup(email, username, password) {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
+    return xhrRequest(`signup`, { email, username, password });
+  }
 
-      xhr.open(`GET`, `signup.php?email=${email}&username=${username}&password=${password}`)
 
-      xhr.onload = () => {
-        if(xhr.status === 200) {
-          const uint8 = new Uint8Array(xhr.response);
-          testSQL.loadUint8Array(uint8, resolve, reject);
-
-          return resolve();
-        }
-
-        return reject(Error(xhr.response));
-      };
-
-      xhr.send();
-    });
   }
 
   /**
@@ -135,22 +74,7 @@ class Identity {
    * @return {array} - returns an array of the databases associated with the user
    */
   getSavedDatabases() {
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-
-      xhr.open(`POST`, `../src/routing.php?action=getAllDatabases`);
-      xhr.responseType = `json`;
-
-      xhr.onload = () => {
-        if(xhr.status === 200) {
-          return resolve(xhr.response);
-        }
-
-        return reject(Error(xhr.reponse));
-      }
-
-      xhr.send();
-    });
+    return xhrRequest(`getAllDatabases`, undefined, `json`);
   }
 
   /**
@@ -305,11 +229,6 @@ const userActions = {
     icon: `fa-user-plus`,
     heading: `Sign up`,
   },
-  manageSession : {
-    className: `ts-join-icon`,
-    icon: `fa-group`,
-    heading: `Sessions`,
-  },
   manageDatabase : {
     className: `ts-save`,
     icon: `fa-save`,
@@ -346,9 +265,7 @@ userActions.login.onSubmit = () => {
       setTimeout(() => $(`#ts-modal`).modal(`hide`), 1000);
 
       identity = new Identity();
-    }).catch((Error) => {
-      addModalValidation(Error);
-    });
+    }).catch((Error) => addModalValidation(Error));
   }
 }
 
@@ -414,7 +331,7 @@ userActions.signup.onSubmit = () => {
       setTimeout(() => $(`#ts-modal`).modal(`hide`), 1000);
 
       identity = new Identity();
-    });
+    }).catch((Error) => addModalValidation(Error));
   }
 }
 
@@ -507,11 +424,9 @@ userActions.manageDatabase.onClick = () => {
 
         const db_id = $(this).data(`id`);
 
-        identity.load(db_id).then(() => {
-          addModalValidation(`Database #${db_id} loaded successfully!`, `success`);
-        }).catch((e) => {
-          addModalValidation(e);
-        });
+        identity.load(db_id)
+          .then(() => addModalValidation(`Database #${db_id} loaded successfully!`, `success`))
+          .catch((Error) => addModalValidation(Error));
       });
 
       $(`.ts-remove`).off(`click`).on(`click`, function() {
@@ -522,9 +437,7 @@ userActions.manageDatabase.onClick = () => {
         identity.delete(db_id).then((response) => {
           addModalValidation(response, `success`);
           refreshListOfDatabases();
-        }).catch((e) => {
-          addModalValidation(e);
-        });
+        }).catch((Error) => addModalValidation(Error));
       });
     });
   };
@@ -535,44 +448,12 @@ userActions.manageDatabase.onClick = () => {
     identity.save().then((response) => {
       addModalValidation(response, `success`);
       refreshListOfDatabases();
-    }).catch((e) => {
-      addModalValidation(e);
-    });
+    }).catch((Error) => addModalValidation(e));
   });
 }
 
 userActions.logout.onClick = () => {
-  const header = `Logout`;
-  const body = `
-    <div class="form-group">
-      <label for="ts-username">Email</label>
-      <input type="email" class="form-control" id="ts-email" placeholder="Enter an email" required>
-      <div class="form-control-feedback"></div>
-      <small class="form-text text-muted">Your email will be used to recover your password if needed.</small>
-    </div>
-    <div class="form-group">
-      <label for="ts-username">Username</label>
-      <input type="text" class="form-control" id="ts-username" placeholder="Enter a username" pattern="[A-Za-z0-9-_]{8,20}" required>
-      <div class="form-control-feedback"></div>
-      <small class="form-text text-muted">Your username can be between 8-20 characters long, containing only letters, numbers, underscores, and dashes.</small>
-    </div>
-    <div class="form-group">
-      <label for="ts-password">Password</label>
-      <input type="password" class="form-control" id="ts-password" placeholder="Enter a password" pattern="[\\w]{8,20}" required>
-      <div class="form-control-feedback"></div>
-      <small class="form-text text-muted">Your password must be 8-20 characters long.</small>
-    </div>
-    <div class="form-group">
-      <label for="ts-password">Confirm Password</label>
-      <input type="password" class="form-control" id="ts-confirm-password" placeholder="Confirm your password" required>
-      <div class="form-control-feedback"></div>
-    </div>`;
-  const footer = `<button type="button" class="btn btn-primary" id="ts-signup">Sign up</button>`;
-
-  populateModal(header, body);
-
   identity.logout().then((response) => {
-
     identity = new Identity();
   });
 }
