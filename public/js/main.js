@@ -314,16 +314,16 @@ const addExpandableActions = (expandableClass, actions, append = false) => {
     if($(`.${className}`).length !== 0) return;
 
     html += `
-      <div class="icon ${className}" ${onClick ? `role="button" data-toggle="modal" data-target="#ts-modal"` : ``}>`;
+      <div class="icon ${className}" ${onClick ? `role="button"` : ``}>`;
 
     if(fileUploadID) {
       html += `
-        <label for="${fileUploadID}" class="m-0">
+        <label for="${fileUploadID}" class="m-0" style="cursor: inherit;">
           <input type="file" id="ts-import" style="display:none" />`;
     }
 
     html += `
-        <i class="fa ${icon}"></i>
+        <i class="fa ${icon}" aria-hidden="true"></i>
         <h6>${heading}</h6>`;
 
     if(fileUploadID) {

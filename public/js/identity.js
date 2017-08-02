@@ -250,6 +250,8 @@ const populateModal = (header, body, footer) => {
   const modalValidation = `<div class="form-feedback alert" style="display: none;"></div>`;
   $(`#ts-modal .modal-body`).html(modalValidation + body);
   $(`#ts-modal .modal-footer`).html(footer);
+
+  $('#ts-modal').modal('show');
 }
 
 /**
