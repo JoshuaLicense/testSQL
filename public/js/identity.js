@@ -22,15 +22,22 @@ class Identity {
         `ts-user-actions`,
         [ userActions.manageDatabase, userActions.logout, ],
       );
+
+      addExpandableIcon(`ts-session-actions`, `Session`, `fa-group`, 20);
+
+      addExpandableActions(`ts-session-actions`, [ sessionActions.join, ], );
+
     } else {
       // Not logged in
-
       addExpandableIcon(`ts-user-actions`, `Guest`, `fa-user-circle`, 10);
 
       addExpandableActions(
         `ts-user-actions`,
         [ userActions.login, userActions.signup, ],
       );
+
+      // check the session icon is removed
+      removeExpandableIcon(`ts-session-actions-icon`);
     }
   }
 
@@ -65,7 +72,68 @@ class Identity {
     return xhrRequest(`signup`, { email, username, password });
   }
 
+  /**
+   * Join a session
+   * @param pin       - the session pin
+   *
+   * @return {object} - returns a promise object
+   */
+  joinSession(pin) {
+    const onSuccess = (xhr) => {
+      if(!Database.loadUint8Array(new Uint8Array(xhr.response))) {
+        return Promise.reject(Error('Problem loading the default database!'));
+      }
+    }
 
+    return xhrRequest(`joinSession`, { pin }, `arraybuffer`, undefined, onSuccess);
+  }
+
+  /**
+   * Gets the user's session progress (the _Questions table)
+   *
+   * @return {object} - returns a promise object
+   */
+  getSessionProgress() {
+    return xhrRequest(`getSessionProgress`, undefined, `json`);
+  }
+
+  /**
+   * Saves the user's session progress (the _Questions table
+   *
+   * @return {object} - returns a promise object
+   */
+  saveSessionProgress() {
+    return xhrRequest(`saveSessionProgress`, undefined, undefined, this.exportProgress());
+  }
+
+  /**
+   * Exports the entire cached questions table
+   *
+   * @return {json} - returns a json string of the cached questions
+   */
+  exportProgress() {
+    const [{ values : progress }] = ts.db.exec(`SELECT * FROM _Questions`);
+
+    return JSON.stringify(savedQuestions);
+  }
+
+  /**
+   * Leave a session
+   *
+   * @return {object} - returns a promise object
+   */
+  leaveSession() {
+    return xhrRequest(`leaveSession`);
+  }
+
+  /**
+   * Get session information
+   * @param sid    - the session id
+   *
+   * @return {array} - array containing session information
+   */
+  getSession(sid) {
+    return xhrRequest(`getSession`, { sid }, `json`);
   }
 
   /**
@@ -116,7 +184,7 @@ class Identity {
 
       xhr.onload = () => {
         if(xhr.status === 200) {
-          return testSQL.loadUint8Array(new Uint8Array(xhr.response), resolve, reject);
+          return Database.loadUint8Array(new Uint8Array(xhr.response)) ? resolve() : reject();
         }
 
         return reject(Error(`Problem loading database!`));
@@ -265,7 +333,7 @@ userActions.login.onSubmit = () => {
       setTimeout(() => $(`#ts-modal`).modal(`hide`), 1000);
 
       identity = new Identity();
-    }).catch((Error) => addModalValidation(Error));
+    }).catch((xhr) => addModalValidation(Error(xhr.response)));
   }
 }
 
@@ -331,7 +399,7 @@ userActions.signup.onSubmit = () => {
       setTimeout(() => $(`#ts-modal`).modal(`hide`), 1000);
 
       identity = new Identity();
-    }).catch((Error) => addModalValidation(Error));
+    }).catch((xhr) => addModalValidation(Error(xhr.response)));
   }
 }
 
@@ -437,7 +505,7 @@ userActions.manageDatabase.onClick = () => {
         identity.delete(db_id).then((response) => {
           addModalValidation(response, `success`);
           refreshListOfDatabases();
-        }).catch((Error) => addModalValidation(Error));
+        }).catch((xhr) => addModalValidation(Error(xhr.response)));
       });
     });
   };
@@ -456,6 +524,92 @@ userActions.logout.onClick = () => {
   identity.logout().then(() => {
     identity = new Identity();
   });
+}
+
+// Session icons
+const sessionActions = {
+  join : {
+    className: `ts-join-session-icon`,
+    icon: `fa-sign-in`,
+    heading: `Join`,
+  },
+  view : {
+    className: `ts-view-session-icon`,
+    icon: `fa-info-circle`,
+    heading: `Details`,
+  },
+  leave : {
+    className: `ts-leave-session-icon`,
+    icon: `fa-sign-out`,
+    heading: `Leave`
+  },
+}
+
+sessionActions.join.onSubmit = () => {
+  clearAllModalValidation();
+
+  const $sessionPin = $(`#ts-session-pin`);
+
+  let hasErrors = false;
+
+  if(!$sessionPin[0].validity.valid) {
+    hasErrors = true;
+
+    addModalInputValidation($sessionPin, $sessionPin[0].validationMessage);
+  }
+
+  if(hasErrors === false) {
+    identity.joinSession($sessionPin.val()).then((xhr) => {
+      $(`#ts-modal .modal-body`).html(`<small class="text-success">Joined session ${$sessionPin.val()}!</small>`);
+      $(`#ts-modal .modal-footer`).html(``);
+
+      // 202 status code means the user
+      // has existing progress in this session, load it
+      if(xhr.status === 202) {
+        // TODO: Show loading
+        identity.getSessionProgress().then((xhr) => {
+          // TODO: new database = new instance of questions.js
+
+          // constuct the insert query
+          let insertSQL = `INSERT INTO _Questions VALUES`;
+
+          xhr.response.forEach((question) => {
+            insertSQL += `(${Object.values(question).join(`, `)})`;
+          });
+
+          ts.db.exec(insertSQL);
+        }).catch((xhr) => addModalValidation(Error(xhr.response)));
+      }
+
+      setTimeout(() => $(`#ts-modal`).modal(`hide`), 1000);
+
+      addExpandableActions(`ts-session-actions`, [ sessionActions.view, sessionActions.leave, ]);
+    }).catch((xhr) => addModalValidation(Error(xhr.response)));
+  }
+}
+
+sessionActions.join.onClick = () => {
+  const header = `Join a session`;
+  const body = `
+    <div class="form-group">
+      <label for="ts-session-pin">Session Pin</label>
+      <input type="text" class="form-control" id="ts-session-pin" placeholder="Enter the session pin">
+      <div class="form-control-feedback"></div>
+      <small class="form-text text-muted">The session pin will be provided by the session owner.</small>
+    </div>`;
+  const footer = `<button type="button" class="btn btn-primary" id="ts-session-join">Join</button>`;
+
+  populateModal(header, body, footer);
+
+  $(`#ts-session-join`).off(`click`).on(`click`, sessionActions.join.onSubmit)
+}
+
+sessionActions.leave.onClick = () => {
+  if(!confirm(`Are you sure you want to leave the session?`)) return false;
+
+  identity.sessionLeave().then(() => {
+    addExpandableActions(`ts-session-actions`, [ sessionActions.join ], );
+  }).catch((xhr) => addModalValidation(Error(xhr.response)));
 }
 
 let identity = new Identity();

@@ -34,6 +34,7 @@ class testSQL
    */
   public static $http_codes = array(
     'OK' => 200,            // standard response for successsful request
+    'ACCEPTED' => 202,      // accepted but processing not complete
     'NO_CONTENT' => 204,    // success but returning no content
     'BAD_REQUEST' => 400,   // client error (resource not set)
     'UNAUTHORIZED' => 401,  // authentication failed
@@ -159,12 +160,9 @@ class testSQL
     $database = $stmt->fetch();
 
     if($database) {
-      header('Content-Type: image/png');
-      header('Content-Length: ' . strlen($database['File']));
-
-      self::response($database['File'], self::$http_codes['OK']);
+      self::response(self::outputBinFile($database['File'], self::$http_codes['OK']));
     }
-    self::response('Database not found!', self::$http_codes['NOT FOUND']);
+    self::response('Database not found!', self::$http_codes['NOT_FOUND']);
   }
 
   /**
@@ -248,7 +246,7 @@ class testSQL
    */
   public function signup(string $email, string $username, string $password) {
     if(!$this->isActiveFeature('register')) {
-      self::response('The login feature is not active!', self::$http_codes['FORBIDDEN']);
+      self::response('The register feature is not active!', self::$http_codes['FORBIDDEN']);
     }
 
     if($this->isLoggedIn()) {
@@ -295,45 +293,143 @@ class testSQL
       unset($_COOKIE['UserJWT']);
       setcookie('UserJWT', '', time() - 3600, '/');
     }
+    self::response('Logged out successfully!', self::$http_codes['OK']);
   }
 
+/**
+ * Joins a session
+ *
+ * If the user was previously in the same session
+ * restore the sessions default database
+ * and then the progress and saved questions
+ *
+ * @param integer   $session_pin       the sessions's pin
+ *
+ * @return {file} - the binary file of the default database
+ */
+ public function joinSession(string $session_pin) {
+   if(!$this->isActiveFeature('join_session')) {
+     self::response('The join_session feature is not active!', self::$http_codes['FORBIDDEN']);
+   }
+
+   if(!$token = $this->getJWT()) {
+     self::response('You need to be logged in to access this feature!', self::$http_codes['UNAUTHORIZED']);
+   }
+
+   if(isset($token['session_id'])) {
+     self::response('You are already in a session!', self::$http_codes['CONFLICT']);
+   }
+
+   $stmt = $this->db->prepare('SELECT `ID`, `Default_Database_ID` FROM `Session` WHERE `Pin` = :pin');
+   $stmt->execute(array(':pin' => $session_pin));
+   $session = $stmt->fetch();
+
+   if($session) {
+     // get the default database
+     $stmt = $this->db->query('SELECT `File` FROM `Stored_Database` WHERE `ID` = ' . $session['Default_Database_ID']);
+     $database = $stmt->fetch();
+
+     if($database) {
+       $key = $this->settings['jwt']['key'];
+       $token['session_id'] = $session['ID'];
+
+       if(!$this->setJWT($token, $key)) {
+         self::response('Problem setting JWT cookie', self::$http_codes['SERVER_ERROR']);
+       }
+
+       // check if the user was already in this sessions
+       $sql = 'SELECT `User_ID`
+               FROM `User_Session`
+               WHERE `User_ID` = :user_id
+                && `Session_ID` = :session_id
+                && `Cached_Questions` IS NOT NULL';
+
+       $stmt = $this->db->prepare($sql);
+       $stmt->execute(array(':user_id' => $token['user_id'], ':session_id' => $session['ID']));
+       $existing_session = $stmt->fetch();
+
+       if($existing_session) {
+         // existing user, tell javascript to call the server for the existing questions
+         self::response(self::outputBinFile($database['File']), self::$http_codes['ACCEPTED']);
+       } else {
+         // Add the session to the database
+         $stmt = $this->db->prepare('INSERT INTO `User_Session` (`User_ID`, `Session_ID`) VALUES (:id, :session_id)');
+         $stmt->execute(array(':user_id' =>  $token['user_id'], ':session_id' => $session['ID']));
+
+         // new to the session, give them the default database
+         self::response(self::outputBinFile($database['File']), self::$http_codes['OK']);
+       }
+     }
+
+     self::response('Default database not found!', self::$http_codes['NOT_FOUND']);
+   }
+
+   self::response('Session not found!', self::$http_codes['NOT_FOUND']);
+ }
+
+ /**
+  * Gets the users previous progress in the session
+  *
+  * @return json  json of the cached questions
+  */
+ public function getSessionProgress() : string {
+   if(!$this->isActiveFeature('join_session')) {
+     self::response('The join_session feature is not active!', self::$http_codes['FORBIDDEN']);
+   }
+
+   if(!$token = $this->getJWT()) {
+     self::response('You need to be logged in to access this feature!', self::$http_codes['UNAUTHORIZED']);
+   }
+
+   if(!isset($token['session_id'])) {
+     self::response('You are not in a session!', self::$http_codes['CONFLICT']);
+   }
+
+   $stmt = $this->db->prepare('SELECT `ID`, `Default_Database_ID` FROM `Session` WHERE `ID` = :id');
+   $stmt->execute(array(':id' => $token['session_id']));
+   $session = $stmt->fetch();
+
+   if($session) {
+     // Does the database still exist?
+     $stmt = $this->db->query('SELECT `ID` FROM `Stored_Database` WHERE `ID` = ' . $session['Default_Database_ID']);
+     $database = $stmt->fetch();
+
+     if($database) {
+       // fetch the user's progress, this should always be found
+       // it's called directly after joinSession
+       // which does the same check, but still check just to be 100% sure
+       $stmt = $this->db->prepare('SELECT `Cached_Questions` FROM `User_Session` WHERE `User_ID` = :user_id && `Session_ID` = :session_id');
+       $stmt->execute(array(':user_id' => $token['user_id'], ':session_id' => $session['ID']));
+       $existing_session = $stmt->fetch();
+
+       if($existing_session
+       && !empty($existing_session['Cached_Questions'])
+       && json_decode($existing_session['Cached_Questions'], true)) {
+         // existing user, tell javascript to call the server for the existing questions
+         self::response(json_decode($existing_session['Cached_Questions']), self::$http_codes['OK']);
+       }
+
+       self::response('No progress was found!', self::$http_codes['NOT_FOUND']);
+     }
+
+     self::response('Default database not found!', self::$http_codes['NOT_FOUND']);
+   }
+
+   self::response('Session not found!', self::$http_codes['NOT_FOUND']);
+ }
+
   /**
-   * Queries the database to return information regarding the current session
+   * Outputs a raw file as an image (binary data)
    *
-   * @param integer   $user_id   the user's primary key (ID)
-   *
-   * @return array    session data, blank array is returned if not found
-   */
-  public function getUserSession(int $user_id) : array {
-    $sql = 'SELECT
-              (SELECT `Username` FROM `User` WHERE `ID` = s.`OwnerUserID`) as "SessionOwner",
-              us.`DateJoined`,
-              s.`CreatedAt`,
-              s.`DefaultDatabaseName`
-            FROM `UserSession` us
-            INNER JOIN `Session` s ON(us.`SessionID` = s.`ID`)
-            WHERE
-              us.`UserID` = "' . $user_id . '"
-              AND us.`DateLeft` IS NULL';
-
-    $stmt = $this->db->query($sql);
-    $session = $stmt->fetch();
-
-    return $session;
-  }
-
-  /**
-   * Outputs a file, with the specified encoding
-   *
-   * @param string    $file_name   the path where the file exists
-   * @param string    $encoding   the expected content type of the file
+   * @param string    $file      the raw binary of a file
    *
    * @return string   returns the content of the file
    */
-  public static function outputFile(string $file_name, string $encoding = 'text/html'): string {
-    header('Content-Type: ' . $encoding);
-    header('Content-Length: ' . filesize($file_name));
-    readfile($file_name);
+  public static function outputBinFile(string $bin) {
+    header('Content-Type: image/png');
+    header('Content-Length: ' . strlen($bin));
+
+    return $bin;
   }
 
   /**
@@ -406,7 +502,7 @@ class testSQL
   /**
    * Check if the user logged in
    *
-   * @return bool
+   * @return {bool} - true if logged in, false otherwise
    */
   public function isLoggedIn() : bool {
     return !($this->getJWT() === false);

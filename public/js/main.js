@@ -6,20 +6,24 @@
  */
 
 /** Class representing the core application */
-class testSQL {
+class Database {
   /**
    * Loads the relevant database and creates a database instance
    * @param {object} arrayBuffer - the database as an array buffer
    */
   constructor(arrayBuffer) {
-    this.db = new SQL.Database(arrayBuffer);
-
     addExpandableIcon(`ts-database-actions`, `Database`, `fa-database`, 30);
 
     addExpandableActions(
       `ts-database-actions`,
       [ databaseActions.import, databaseActions.restore, databaseActions.download, ]
     );
+
+    this.db = new SQL.Database(arrayBuffer);
+
+    // a shadow database that is in-memory only, not persistent
+    // changes are made here
+    this.shadowDB = new SQL.Database(arrayBuffer);
   }
 
   /**
@@ -74,9 +78,8 @@ class testSQL {
   static loadCached(cachedDatabase, resolve, reject) {
     const result = [];
     let i;
-    let size;
 
-    for (i = 0, size = cachedDatabase.length; i < size; i += 1) {
+    for (i = 0; i < cachedDatabase.length; i += 1) {
       result.push(cachedDatabase.charCodeAt(i));
     }
 
@@ -84,7 +87,8 @@ class testSQL {
   }
 
   /**
-   * Converts a Uint8Array to a database file string and saves it in the local storage
+   * Converts a Uint8Array to a database file string
+   * saves it in the local storage
    */
   save() {
     const result = this.db.export();
@@ -101,28 +105,27 @@ class testSQL {
 
   /**
    * Converts a database file (sqlite) into a Uint8Array
-   * @param {array} uint8           - the Uint8Array
-   * @param {object} resolve        - the resolve promise object
-   * @param {object} reject         - the reject promise object
+   * @param {array} uint8    - the Uint8Array
    *
-   * @return {object}               - returns a promise object
+   * @return {bool}          - true if successful, false if reverted
    */
   static loadUint8Array(uint8, resolve, reject) {
     // save the old database if the imported file is corrupt
     const _ts = ts;
 
-    ts = new testSQL(uint8);
+    ts = new Database(uint8);
 
     // the scheme will fail to load if the file is not a VALID database
     try {
       ts.displaySchema();
       ts.save();
 
-      resolve();
+      return true;
     } catch(e) {
       // revert all changes
       ts = _ts;
-      reject(Error('Bad, Bad'));
+
+      return false;
     }
   }
 
@@ -137,7 +140,7 @@ class testSQL {
       let fileReader = new FileReader();
       fileReader.onload = () => {
         const uint8 = new Uint8Array(fileReader.result);
-        testSQL.loadUint8Array(uint8, resolve, reject);
+        return Database.loadUint8Array(uint8) ? resolve() : reject();
       }
       fileReader.readAsArrayBuffer(file);
     });
@@ -167,7 +170,9 @@ class testSQL {
    */
   executeInput(sql, save = false) {
     try {
-      showOutput(this.db.exec(sql));
+      const result = this.db.exec(sql);
+
+      showOutput(result);
 
       let rowsModified = this.db.getRowsModified();
 
@@ -190,11 +195,11 @@ class testSQL {
    * Display the current schema in the DOM
    */
   displaySchema() {
-    const schema = this.db.exec(`SELECT "tbl_name" FROM "sqlite_master" WHERE "type" = 'table' AND "tbl_name" != "ts-questions"`);
+    const schema = this.db.exec(`SELECT tbl_name FROM sqlite_master WHERE type = 'table' AND tbl_name != '_Questions'`);
     let html = ``;
 
     schema[0].values.forEach((el) => {
-      let count = this.db.exec(`SELECT COUNT(*) FROM ${el}`);
+      const count = this.db.exec(`SELECT COUNT(*) FROM ${el}`);
 
       html = html + `<li class="list-group-item list-group-item-action justify-content-between py-1" data-name="${el}" role="button">${el} <span class="badge badge-default badge-pill">${count[0].values[0]}</span></a>`
     });
@@ -202,20 +207,6 @@ class testSQL {
     $(`.ts-schema`).html(html);
   }
 }
-
-/* load (async) the required data before instanticing the class
- * http://stackoverflow.com/questions/24398699/is-it-bad-practice-to-have-a-constructor-function-return-a-promise
- */
-let ts;
-
-let testSQLPromise = testSQL.load().then((response) => {
-  // load after the database
-  ts = new testSQL(response);
-
-  ts.displaySchema();
-}, (error) => {
-  console.log(error);
-});
 
 /**
  * Make an xhr request
@@ -227,7 +218,7 @@ let testSQLPromise = testSQL.load().then((response) => {
  *
  * @return {object} - returns a promise object
  */
-const xhrRequest = (action, urlData, responseType, postData, onSuccess) => {
+const xhrRequest = (action, urlData, responseType, postData, onSuccess, onError) => {
   return new Promise((resolve, reject) => {
     // construct the URL
     let routingURL = `../src/routing.php?action=${action}`;
@@ -239,14 +230,16 @@ const xhrRequest = (action, urlData, responseType, postData, onSuccess) => {
     xhr.responseType = responseType || `text`;
 
     xhr.onload = () => {
-      if(xhr.status === 200) {
+      if(xhr.status >= 200 && xhr.status < 300) {
         // run the custom onSuccess if set
-        if(onSuccess) onSuccess();
+        if(onSuccess) onSuccess(xhr); // then resolve?
 
-        return resolve(xhr.response);
+        return resolve(xhr);
       }
 
-      return reject(Error(xhr.response));
+      if(onError) onError(xhr);
+
+      return reject(xhr);
     }
 
     // send the postData if set, otherwise send nothing (null)
@@ -362,6 +355,14 @@ const addExpandableIcon = (className, heading, iconClass, order) => {
 }
 
 /**
+ * Removes an expandable side icon
+ * @param {string}  className       - the class that will contain the actions
+ */
+const removeExpandableIcon = (className) => {
+  $(`.${className}`).parent().fadeOut(function() { $(this).remove(); });
+}
+
+/**
  * Adds action icons to an expandable sidebar icon
  * @param {string}  expandableClass  - the class to add the actions too
  * @param {array}   actions         - the array of objects containing icon information
@@ -380,7 +381,7 @@ const addExpandableActions = (expandableClass, actions, append = false) => {
     if(fileUploadID) {
       html += `
         <label for="${fileUploadID}" class="m-0" style="cursor: inherit;">
-          <input type="file" id="ts-import" style="display:none" />`;
+          <input type="file" id="${fileUploadID}" class="${fileUploadID}" style="display:none" />`;
     }
 
     html += `
@@ -394,7 +395,7 @@ const addExpandableActions = (expandableClass, actions, append = false) => {
     html += `</div>`;
 
     if(onClick) {
-      $(`.${expandableClass}`).on(`click`, `.${className}`, onClick);
+      $(`.${expandableClass}`).on(`click`, `.${fileUploadID || className}`, onClick);
     }
   }
 
@@ -431,9 +432,9 @@ const databaseActions = {
 };
 
 databaseActions.import.onClick = () => {
-  if(confirm(`Importing a database will remove you from a session! Are you sure you want to continue?`)) return false;
+  if(!confirm(`Importing a database will remove you from a session! Are you sure you want to continue?`)) return false;
 
-  $(`#ts-import`).off().on(`change`, function() {
+  $(`#ts-import`).off(`change`).on(`change`, function() {
     const file = $(this).get(0).files[0];
 
     ts.importFile(file);
@@ -443,11 +444,11 @@ databaseActions.import.onClick = () => {
 databaseActions.restore.onClick = () => {
   clearLocalStorage();
 
-  testSQL.load().then((response) => {
+  Database.load().then((response) => {
     // save the old database if the imported file is corrupt
     const _ts = ts;
 
-    ts = new testSQL(response);
+    ts = new Database(response);
 
     // the scheme will fail to load if the file is not a VALID database
     try {
@@ -585,4 +586,18 @@ $(document).ready(function() {
       $(`body`).off(`click`);
     });
   });
+});
+
+/* load (async) the required data before instanticing the class
+ * http://stackoverflow.com/questions/24398699/is-it-bad-practice-to-have-a-constructor-function-return-a-promise
+ */
+let ts;
+
+let loadDatabasePromise = Database.load().then((response) => {
+  // load after the database
+  ts = new Database(response);
+
+  ts.displaySchema();
+}, (error) => {
+  console.log(error);
 });

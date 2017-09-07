@@ -13,27 +13,20 @@ class Question {
    * Initialized the questions, overrides main.js functions
    */
   initialize() {
-    ts.db.exec(`CREATE TABLE IF NOT EXISTS \`ts-questions\` (\`ts-number\` INTEGER PRIMARY KEY, \`ts-theme\` TEXT, \`ts-question\` TEXT, \`ts-answer\` TEXT, \`ts-keywords\` TEXT, \`ts-statement\` TEXT, \`ts-completed\` NULL DEFAULT NULL)`);
+    ts.db.exec(`
+      CREATE TABLE IF NOT EXISTS
+        _Questions (
+          number INTEGER PRIMARY KEY,
+          theme TEXT,
+          questionText TEXT,
+          modelSQL TEXT,
+          keywordsArray TEXT,
+          statementType TEXT,
+          isCompleted NULL DEFAULT NULL
+        )`);
 
     if(this.total() === 0) {
       throw Error(`No questions found`);
-    }
-
-    // Override the main execute class to validate the answer too!
-    const _executeInput = ts.executeInput;
-    ts.executeInput = (sql) => {
-      _executeInput.call(ts, sql, this.validateInput(sql));
-    }
-
-    const _importFile = ts.importFile;
-    ts.importFile = (file) => {
-      _importFile(file).then(() => {
-        this.refresh();
-        ts.save();
-      },
-      (error) => {
-        console.log(error);
-      });
     }
   }
 
@@ -42,11 +35,9 @@ class Question {
    * @param {integer} number - the question number
    */
   removeCachedQuestion(number) {
-    let sql = `DELETE FROM \`ts-questions\``;
+    let sql = `DELETE FROM _Questions`;
 
-    if(number) {
-      sql = `${sql} WHERE \`ts-number\` = ${number}`;
-    }
+    if(number) sql = `${sql} WHERE number = ${number}`;
 
     ts.db.exec(sql);
   }
@@ -65,7 +56,11 @@ class Question {
    * @return {object} object containing information regarding the question
    */
   get(number) {
-    const storedQuestion = ts.db.exec(`SELECT * FROM \`ts-questions\` WHERE \`ts-number\` = ${number}`);
+    const storedQuestion = ts.db.exec(`
+      SELECT *
+      FROM _Questions
+      WHERE number = ${number}
+    `);
 
     if (storedQuestion.length > 0) {
       const [ number, theme, question, answer, keywords, statement, completed, ] = storedQuestion[0].values[0];
@@ -110,7 +105,12 @@ class Question {
    * @param {string} statement - the type of statement expected (SELECT, UPDATE)
    */
   save({ theme, question, number, answer, keywords, statement, }) {
-    const stmt = ts.db.prepare(`INSERT INTO \`ts-questions\` VALUES (?, ?, ?, ?, ?, ?, NULL)`, [number, theme, question, answer, keywords, statement]);
+    const stmt = ts.db.prepare(`
+      INSERT INTO _Questions
+      VALUES (?, ?, ?, ?, ?, ?, NULL)`,
+      [number, theme, question, answer, keywords, statement]
+    );
+
     stmt.step();
     stmt.free();
   }
@@ -122,7 +122,12 @@ class Question {
    * @return {boolean} boolean of if the question is completed or not
    */
   isCompleted(number) {
-    let isCompleted = ts.db.exec('SELECT `ts-number` FROM `ts-questions` WHERE `ts-completed` IS NOT NULL ' + (number ? "AND `ts-number` = " + number : ""));
+    const isCompleted = ts.db.exec(`
+      SELECT number
+      FROM _Questions
+      WHERE completed IS NOT NULL
+      ${number ? `&& number = ${number}` : ``}`
+    );
 
     return !!isCompleted;
   }
@@ -132,7 +137,11 @@ class Question {
    * @return {array} the completed question numbers
    */
   getAllCompleted() {
-    let completed = ts.db.exec('SELECT `ts-number` FROM `ts-questions` WHERE `ts-completed` IS NOT NULL');
+    let completed = ts.db.exec(`
+      SELECT number
+      FROM _Questions
+      WHERE completed IS NOT NULL`
+    );
 
     return completed[0].values.reduce((a, b) => a.concat(b));
   }
@@ -142,7 +151,11 @@ class Question {
    * @param {integer} number - the question number
    */
   markCompleted(number) {
-    ts.db.exec('UPDATE `ts-questions` SET `ts-completed` = 1 WHERE `ts-number` = ' + number);
+    ts.db.exec(`
+      UPDATE _Questions
+      SET completed = 1
+      WHERE number = ${number}`
+    );
 
     $(`#ts-q${number}`).removeClass(`btn-secondary`).addClass(`btn-success`);
 
@@ -330,7 +343,7 @@ let currentQuestion = parseInt(Cookies.get(`CurrentQuestion`)) || 1;
 let question;
 
 // run after the main promise is resolved
-testSQLPromise.then(() => {
+loadDatabasePromise.then(() => {
   question = new Question();
 
   const questionNumbersHTML = `
@@ -360,6 +373,23 @@ testSQLPromise.then(() => {
 
   // load the current question
   question.display(currentQuestion);
+
+  // Override the main execute class to validate the answer too!
+  const _executeInput = ts.executeInput;
+  ts.executeInput = (sql) => {
+    _executeInput.call(ts, sql, this.validateInput(sql));
+  }
+
+  const _importFile = ts.importFile;
+  ts.importFile = (file) => {
+    _importFile(file).then(() => {
+      this.refresh();
+      ts.save();
+    },
+    (error) => {
+      console.log(error);
+    });
+  }
 });
 
 // binding arrow keys for improved accessibility

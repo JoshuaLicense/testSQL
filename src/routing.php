@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-$action = $_GET['action'] ?? exit(testSQL::$http_codes['BAD_REQUEST']);
+$action = $_GET['action'] ?? testSQL::response('Routing action not found', testSQL::$http_codes['BAD_REQUEST']);
 
 spl_autoload_register(function($class_name) {
   $isVendor = strpos($class_name, '\\');
@@ -58,6 +58,27 @@ if($action === 'signup') {
   $testSQL->signup($email, $username, $password);
 }
 
+// Session management
+if($action === 'joinSession') {
+  $pin = $_GET['pin'] ?? testSQL::response('Please enter a session id!', testSQL::$http_codes['BAD_REQUEST']);
+
+  $testSQL->joinSession($pin);
+}
+
+if($action === 'getSessionProgress') {
+  $testSQL->getSessionProgress();
+}
+
+if($action === 'leaveSession') {
+  $testSQL->leaveSession();
+}
+
+if($action === 'getSession') {
+  $session_id = $_GET['sid'] ?? testSQL::response('Please enter a session id!', testSQL::$http_codes['BAD_REQUEST']);
+
+  $testSQL->getSession($session_id);
+}
+
 // Database management
 if($action === 'getAllDatabases') {
   $testSQL->getAllDatabases();
@@ -88,4 +109,5 @@ if($action === 'deleteDatabase') {
   $testSQL->deleteDatabase((int) $db_id);
 }
 
+testSQL::response('Routing action not found!', testSQL::$http_codes['NOT_FOUND']);
 ?>
