@@ -14,4 +14,4 @@ testSQL is an application that is an easy to deploy interactive tuition tool tha
 * The application will become more modular where removing a file will only remove specific functionality
 
 ### Contributions
-* I am in the process of re-coding the application into React, see ['here'](https://github.com/JoshuaLicense/react-testsql).
+* I am in the process of re-coding the application into React, see [here](https://github.com/JoshuaLicense/react-testsql).
